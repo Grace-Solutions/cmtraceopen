@@ -1,0 +1,211 @@
+name: "CMTrace Open: Windows Signed Release"
+
+on:
+  push:
+    tags:
+      - "v*"
+      - "[0-9]*.[0-9]*.[0-9]*"
+      - "!*.*.*.*"
+  workflow_dispatch:
+    inputs:
+      version:
+        description: Version to release (for example 0.1.1 or v0.1.1)
+        required: true
+        type: string
+
+permissions:
+  contents: write
+
+jobs:
+  windows-signed-release:
+    name: Signed Windows Release
+    runs-on: windows-latest
+
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: "20"
+          cache: npm
+          cache-dependency-path: package-lock.json
+
+      - name: Setup Rust
+        uses: dtolnay/rust-toolchain@stable
+        with:
+          targets: x86_64-pc-windows-msvc
+
+      - name: Install frontend dependencies
+        run: npm ci
+
+      - name: Resolve release version
+        id: resolve_version
+        shell: pwsh
+        run: |
+          if ("${{ github.event_name }}" -eq "workflow_dispatch") {
+            $rawVersion = "${{ inputs.version }}"
+          } else {
+            $rawVersion = "${{ github.ref_name }}"
+          }
+
+          $normalizedVersion = $rawVersion.Trim()
+          if ($normalizedVersion.StartsWith("v")) {
+            $normalizedVersion = $normalizedVersion.Substring(1)
+          }
+
+          if (-not $normalizedVersion) {
+            throw "Could not determine a release version."
+          }
+
+          $tagName = "v$normalizedVersion"
+
+          "version=$normalizedVersion" | Out-File -FilePath $env:GITHUB_OUTPUT -Encoding utf8 -Append
+          "tag_name=$tagName" | Out-File -FilePath $env:GITHUB_OUTPUT -Encoding utf8 -Append
+
+      - name: Validate version consistency
+        shell: pwsh
+        env:
+          VERSION: ${{ steps.resolve_version.outputs.version }}
+        run: |
+          $packageVersion = (Get-Content package.json -Raw | ConvertFrom-Json).version
+          $tauriVersion = (Get-Content src-tauri/tauri.conf.json -Raw | ConvertFrom-Json).version
+          $cargoVersion = [regex]::Match((Get-Content src-tauri/Cargo.toml -Raw), '(?m)^version\s*=\s*"([^"]+)"$').Groups[1].Value
+
+          $versions = @{
+            package = $packageVersion
+            tauri = $tauriVersion
+            cargo = $cargoVersion
+            workflow = $env:VERSION
+          }
+
+          $mismatches = $versions.GetEnumerator() | Where-Object { $_.Value -ne $env:VERSION }
+          if ($mismatches) {
+            $details = ($versions.GetEnumerator() | ForEach-Object { "{0}={1}" -f $_.Key, $_.Value }) -join ", "
+            throw "Version mismatch detected: $details"
+          }
+
+      - name: Create release tag for manual dispatch
+        if: github.event_name == 'workflow_dispatch'
+        shell: pwsh
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          TAG_NAME: ${{ steps.resolve_version.outputs.tag_name }}
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git fetch --tags --force
+
+          $tagExists = git rev-parse --verify --quiet "refs/tags/$env:TAG_NAME"
+          if (-not $tagExists) {
+            git tag $env:TAG_NAME
+            git push origin $env:TAG_NAME
+          }
+
+      - name: Build Windows MSI and standalone EXE
+        run: npm run app:build:release -- --target x86_64-pc-windows-msvc --bundles msi
+
+      - name: Stage Windows release artifacts
+        id: stage_artifacts
+        shell: pwsh
+        env:
+          VERSION: ${{ steps.resolve_version.outputs.version }}
+        run: |
+          $releaseDir = Join-Path $PWD "src-tauri\target\x86_64-pc-windows-msvc\release"
+          $bundleMsiDir = Join-Path $releaseDir "bundle\msi"
+          $artifactDir = Join-Path $PWD "release-artifacts"
+
+          New-Item -ItemType Directory -Force -Path $artifactDir | Out-Null
+
+          $appExeCandidates = Get-ChildItem -Path $releaseDir -Filter *.exe -File |
+            Where-Object {
+              $_.DirectoryName -eq $releaseDir -and
+              $_.Name -notmatch '(?i)(setup|updater|uninstall|nsis)'
+            }
+
+          if ($appExeCandidates.Count -ne 1) {
+            $names = ($appExeCandidates | ForEach-Object { $_.FullName }) -join ", "
+            throw "Expected exactly one standalone app EXE in $releaseDir. Found: $names"
+          }
+
+          $msiCandidates = Get-ChildItem -Path $bundleMsiDir -Filter *.msi -File -Recurse
+          if ($msiCandidates.Count -ne 1) {
+            $names = ($msiCandidates | ForEach-Object { $_.FullName }) -join ", "
+            throw "Expected exactly one MSI in $bundleMsiDir. Found: $names"
+          }
+
+          $stagedExe = Join-Path $artifactDir "CMTrace-Open_$($env:VERSION)_x64.exe"
+          $stagedMsi = Join-Path $artifactDir "CMTrace-Open_$($env:VERSION)_x64.msi"
+
+          Copy-Item $appExeCandidates[0].FullName $stagedExe -Force
+          Copy-Item $msiCandidates[0].FullName $stagedMsi -Force
+
+          "signed_exe_path=$stagedExe" | Out-File -FilePath $env:GITHUB_OUTPUT -Encoding utf8 -Append
+          "signed_msi_path=$stagedMsi" | Out-File -FilePath $env:GITHUB_OUTPUT -Encoding utf8 -Append
+
+      - name: Sign standalone EXE
+        uses: azure/trusted-signing-action@v0
+        with:
+          azure-tenant-id: ${{ secrets.AZURE_TENANT_ID }}
+          azure-client-id: ${{ secrets.AZURE_CLIENT_ID }}
+          azure-client-secret: ${{ secrets.AZURE_CLIENT_SECRET }}
+          endpoint: ${{ secrets.SIGNING_ENDPOINT }}
+          trusted-signing-account-name: ${{ secrets.SIGNING_ACCOUNT_NAME }}
+          certificate-profile-name: ${{ secrets.SIGNING_PROFILE_NAME }}
+          files-folder: ${{ github.workspace }}\release-artifacts
+          files-folder-filter: exe
+          file-digest: SHA256
+          timestamp-rfc3161: http://timestamp.acs.microsoft.com
+          timestamp-digest: SHA256
+
+      - name: Sign MSI
+        uses: azure/trusted-signing-action@v0
+        with:
+          azure-tenant-id: ${{ secrets.AZURE_TENANT_ID }}
+          azure-client-id: ${{ secrets.AZURE_CLIENT_ID }}
+          azure-client-secret: ${{ secrets.AZURE_CLIENT_SECRET }}
+          endpoint: ${{ secrets.SIGNING_ENDPOINT }}
+          trusted-signing-account-name: ${{ secrets.SIGNING_ACCOUNT_NAME }}
+          certificate-profile-name: ${{ secrets.SIGNING_PROFILE_NAME }}
+          files-folder: ${{ github.workspace }}\release-artifacts
+          files-folder-filter: msi
+          file-digest: SHA256
+          timestamp-rfc3161: http://timestamp.acs.microsoft.com
+          timestamp-digest: SHA256
+
+      - name: Upload signed workflow artifacts
+        uses: actions/upload-artifact@v4
+        with:
+          name: cmtrace-open-windows-signed-${{ steps.resolve_version.outputs.version }}
+          path: |
+            ${{ steps.stage_artifacts.outputs.signed_exe_path }}
+            ${{ steps.stage_artifacts.outputs.signed_msi_path }}
+          if-no-files-found: error
+
+      - name: Publish signed Windows assets to GitHub Release
+        shell: pwsh
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          TAG_NAME: ${{ steps.resolve_version.outputs.tag_name }}
+          SIGNED_EXE_PATH: ${{ steps.stage_artifacts.outputs.signed_exe_path }}
+          SIGNED_MSI_PATH: ${{ steps.stage_artifacts.outputs.signed_msi_path }}
+        run: |
+          $releaseTitle = "CMTrace Open $env:TAG_NAME"
+          $releaseNotes = @"
+          ## CMTrace Open $env:TAG_NAME
+
+          Open-source CMTrace log viewer with built-in Intune diagnostics.
+
+          ### Windows Downloads
+          - Signed standalone EXE
+          - Signed MSI installer
+          "@
+
+          gh release view $env:TAG_NAME *> $null
+          if ($LASTEXITCODE -ne 0) {
+            gh release create $env:TAG_NAME $env:SIGNED_EXE_PATH $env:SIGNED_MSI_PATH --title $releaseTitle --notes $releaseNotes
+          } else {
+            gh release upload $env:TAG_NAME $env:SIGNED_EXE_PATH $env:SIGNED_MSI_PATH --clobber
+          }
