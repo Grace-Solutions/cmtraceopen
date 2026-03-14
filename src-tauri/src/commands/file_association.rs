@@ -207,11 +207,11 @@ pub fn get_file_association_prompt_status(
     #[cfg(target_os = "windows")]
     {
         let is_associated = is_app_associated_with_log_extensions()?;
-        return Ok(FileAssociationPromptStatus {
+        Ok(FileAssociationPromptStatus {
             supported: true,
             should_prompt: !preferences.suppress_prompt && !is_associated,
             is_associated,
-        });
+        })
     }
 
     #[cfg(not(target_os = "windows"))]
@@ -237,7 +237,7 @@ pub fn associate_log_files_with_app(app: AppHandle) -> Result<(), String> {
                 suppress_prompt: false,
             },
         )?;
-        return Ok(());
+        Ok(())
     }
 
     #[cfg(not(target_os = "windows"))]
