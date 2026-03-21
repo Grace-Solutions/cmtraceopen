@@ -12,6 +12,7 @@ import { useMacosDiagStore } from "../../stores/macos-diag-store";
 import { useUiStore } from "../../stores/ui-store";
 import { macosQueryUnifiedLog } from "../../lib/commands";
 import { getLogListMetrics } from "../../lib/log-accessibility";
+import { simplifyMessage } from "../../lib/unified-log-utils";
 
 const PRESETS = [
   { id: "mdm-client", label: "MDM Client (mdmclient)" },
@@ -313,6 +314,7 @@ export function MacosDiagUnifiedLogTab() {
 
   const [timeRangeMinutes, setTimeRangeMinutes] = useState(60);
   const [maxResults, setMaxResults] = useState(5000);
+  const [hideNoise, setHideNoise] = useState(true);
 
   // Column resize state
   const [colWidths, setColWidths] = useState({ timestamp: 170, process: 140, level: 80 });
@@ -347,7 +349,14 @@ export function MacosDiagUnifiedLogTab() {
 
   const scrollRef = useRef<HTMLDivElement>(null);
 
-  const entries = unifiedLogResult?.entries ?? [];
+  const rawEntries = unifiedLogResult?.entries ?? [];
+  const entries = useMemo(() => {
+    if (!hideNoise) return rawEntries;
+    return rawEntries.filter((e) => {
+      const s = simplifyMessage(e.message, e.process);
+      return !s || s.category !== "network-noise";
+    });
+  }, [rawEntries, hideNoise]);
 
   const virtualizer = useVirtualizer({
     count: entries.length,
@@ -418,6 +427,15 @@ export function MacosDiagUnifiedLogTab() {
           />
         </div>
 
+        <label style={{ display: "flex", alignItems: "center", gap: "5px", alignSelf: "flex-end", fontSize: "11px", color: tokens.colorNeutralForeground3, cursor: "pointer" }}>
+          <input
+            type="checkbox"
+            checked={hideNoise}
+            onChange={(e) => setHideNoise(e.target.checked)}
+          />
+          Hide network noise
+        </label>
+
         <Button
           appearance="primary"
           size="small"
@@ -463,7 +481,7 @@ export function MacosDiagUnifiedLogTab() {
         <div className={styles.tableWrap}>
           <div className={styles.tableHeader}>
             <div className={styles.tableTitle}>
-              Unified Log ({entries.length.toLocaleString()} entries)
+              Unified Log ({entries.length.toLocaleString()} entries{hideNoise && rawEntries.length !== entries.length ? `, ${(rawEntries.length - entries.length).toLocaleString()} hidden` : ""})
             </div>
           </div>
 
@@ -551,13 +569,29 @@ export function MacosDiagUnifiedLogTab() {
                         {entry.level}
                       </span>
                     </div>
-                    <div
-                      className={`${styles.cell} ${styles.cellMessage}`}
-                      style={{ fontSize: metrics.fontSize }}
-                      title={entry.message}
-                    >
-                      {entry.message}
-                    </div>
+                    {(() => {
+                      const simplified = simplifyMessage(entry.message, entry.process);
+                      return (
+                        <div
+                          className={`${styles.cell} ${styles.cellMessage}`}
+                          style={{ fontSize: metrics.fontSize }}
+                          title={entry.message}
+                        >
+                          {simplified ? (
+                            <>
+                              <span style={{ fontWeight: 500 }}>{simplified.summary}</span>
+                              {simplified.category === "http" && (
+                                <span style={{ color: tokens.colorNeutralForeground3, marginLeft: "6px", fontSize: metrics.fontSize - 2 }}>
+                                  {entry.message.length > 80 ? entry.message.slice(0, 80) + "…" : ""}
+                                </span>
+                              )}
+                            </>
+                          ) : (
+                            entry.message
+                          )}
+                        </div>
+                      );
+                    })()}
                   </div>
                 );
               })}
