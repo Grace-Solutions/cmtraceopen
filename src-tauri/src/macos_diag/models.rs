@@ -76,6 +76,9 @@ pub struct MacosMdmPayload {
     pub payload_display_name: Option<String>,
     pub payload_type: String,
     pub payload_uuid: Option<String>,
+    pub payload_data: Option<String>,
+    pub payload_description: Option<String>,
+    pub payload_version: Option<u32>,
 }
 
 #[derive(Debug, Clone, Serialize)]
@@ -90,6 +93,9 @@ pub struct MacosMdmProfile {
     pub payloads: Vec<MacosMdmPayload>,
     pub is_managed: bool,
     pub verification_state: Option<String>,
+    pub description: Option<String>,
+    pub source: Option<String>,
+    pub removal_disallowed: Option<bool>,
 }
 
 #[derive(Debug, Clone, Serialize)]
