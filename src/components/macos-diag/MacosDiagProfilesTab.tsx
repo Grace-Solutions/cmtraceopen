@@ -11,6 +11,7 @@ import { useMacosDiagStore } from "../../stores/macos-diag-store";
 import { useUiStore } from "../../stores/ui-store";
 import { macosListProfiles } from "../../lib/commands";
 import { getLogListMetrics } from "../../lib/log-accessibility";
+import { deriveFriendlyName, parsePayloadData } from "../../lib/profile-utils";
 
 const useStyles = makeStyles({
   enrollmentCard: {
@@ -241,6 +242,60 @@ const useStyles = makeStyles({
     backgroundColor: "#e8f0fe",
     color: "#0f6cbd",
   },
+  settingsTable: {
+    backgroundColor: tokens.colorNeutralBackground1,
+    ...shorthands.border("1px", "solid", tokens.colorNeutralStroke1),
+    ...shorthands.borderRadius(tokens.borderRadiusMedium),
+    overflow: "hidden",
+  },
+  settingsTarget: {
+    ...shorthands.padding("6px", "10px"),
+    backgroundColor: tokens.colorNeutralBackground3,
+    fontFamily: tokens.fontFamilyMonospace,
+    color: tokens.colorNeutralForeground3,
+    borderBottom: `1px solid ${tokens.colorNeutralStroke1}`,
+  },
+  settingsHeader: {
+    textAlign: "left" as const,
+    ...shorthands.padding("6px", "10px"),
+    backgroundColor: tokens.colorNeutralBackground3,
+    fontSize: "10.5px",
+    fontWeight: 600,
+    color: tokens.colorNeutralForeground3,
+    textTransform: "uppercase" as const,
+    letterSpacing: "0.3px",
+    borderBottom: `1px solid ${tokens.colorNeutralStroke1}`,
+  },
+  settingsRow: {
+    ":hover": {
+      backgroundColor: tokens.colorNeutralBackground3,
+    },
+  },
+  settingKey: {
+    ...shorthands.padding("4px", "10px"),
+    fontFamily: tokens.fontFamilyMonospace,
+    color: tokens.colorNeutralForeground1,
+    borderBottom: `1px solid ${tokens.colorNeutralStroke2}`,
+    whiteSpace: "nowrap" as const,
+    verticalAlign: "top" as const,
+  },
+  settingValue: {
+    ...shorthands.padding("4px", "10px"),
+    fontFamily: tokens.fontFamilyMonospace,
+    color: tokens.colorNeutralForeground1,
+    borderBottom: `1px solid ${tokens.colorNeutralStroke2}`,
+    wordBreak: "break-all" as const,
+  },
+  boolTrue: {
+    color: "#137333",
+    fontWeight: 600,
+  },
+  boolFalse: {
+    color: tokens.colorNeutralForeground3,
+  },
+  arrayValue: {
+    color: tokens.colorBrandForeground1,
+  },
   centered: {
     display: "flex",
     justifyContent: "center",
@@ -375,8 +430,13 @@ export function MacosDiagProfilesTab() {
               >
                 <div>
                   <div className={styles.profileCardName} style={{ fontSize: metrics.fontSize }}>
-                    {profile.profileDisplayName}
+                    {deriveFriendlyName(profile) ?? profile.profileDisplayName}
                   </div>
+                  {deriveFriendlyName(profile) && (
+                    <div className={styles.profileCardId} style={{ fontSize: metrics.fontSize - 2 }}>
+                      {profile.profileDisplayName}
+                    </div>
+                  )}
                   <div className={styles.profileCardId} style={{ fontSize: metrics.fontSize - 2 }}>
                     {profile.profileIdentifier}
                   </div>
@@ -471,14 +531,54 @@ export function MacosDiagProfilesTab() {
                           <div className={styles.payloadId} style={{ fontSize: metrics.fontSize - 2 }}>
                             {payload.payloadIdentifier}
                           </div>
-                          {payload.payloadData && (
-                            <div
-                              className={styles.payloadDataBlock}
-                              style={{ fontSize: Math.max(10, metrics.fontSize - 2) }}
-                            >
-                              {payload.payloadData}
-                            </div>
-                          )}
+                          {payload.payloadData && (() => {
+                            const parsed = parsePayloadData(payload.payloadData);
+                            if (parsed.entries.length === 0) {
+                              return (
+                                <div
+                                  className={styles.payloadDataBlock}
+                                  style={{ fontSize: Math.max(10, metrics.fontSize - 2) }}
+                                >
+                                  {payload.payloadData}
+                                </div>
+                              );
+                            }
+                            return (
+                              <div className={styles.settingsTable} style={{ marginTop: "8px" }}>
+                                {parsed.appTarget && (
+                                  <div className={styles.settingsTarget} style={{ fontSize: metrics.fontSize - 2 }}>
+                                    Target: <span style={{ fontWeight: 600 }}>{parsed.appTarget}</span>
+                                  </div>
+                                )}
+                                <table style={{ width: "100%", borderCollapse: "collapse" }}>
+                                  <thead>
+                                    <tr>
+                                      <th className={styles.settingsHeader} style={{ fontSize: metrics.fontSize - 2 }}>Setting</th>
+                                      <th className={styles.settingsHeader} style={{ fontSize: metrics.fontSize - 2 }}>Value</th>
+                                    </tr>
+                                  </thead>
+                                  <tbody>
+                                    {parsed.entries.map((entry) => (
+                                      <tr key={entry.key} className={styles.settingsRow}>
+                                        <td className={styles.settingKey} style={{ fontSize: metrics.fontSize - 1 }}>{entry.key}</td>
+                                        <td className={styles.settingValue} style={{ fontSize: metrics.fontSize - 1 }}>
+                                          {entry.type === "boolean" ? (
+                                            <span className={entry.value === "1" ? styles.boolTrue : styles.boolFalse}>
+                                              {entry.value === "1" ? "Yes" : "No"}
+                                            </span>
+                                          ) : entry.type === "array" ? (
+                                            <span className={styles.arrayValue}>{entry.value}</span>
+                                          ) : (
+                                            entry.value
+                                          )}
+                                        </td>
+                                      </tr>
+                                    ))}
+                                  </tbody>
+                                </table>
+                              </div>
+                            );
+                          })()}
                         </div>
                       ))}
                     </>
