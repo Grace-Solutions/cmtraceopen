@@ -13,7 +13,8 @@ const useStyles = makeStyles({
     gap: "16px",
     ...shorthands.padding("14px", "20px"),
     backgroundImage:
-      "linear-gradient(135deg, rgba(15,108,189,0.06), rgba(15,108,189,0.02))",
+      "none",
+    backgroundColor: tokens.colorNeutralBackground2,
     borderBottom: `1px solid ${tokens.colorNeutralStroke1}`,
   },
   titleBlock: {
@@ -46,9 +47,9 @@ const useStyles = makeStyles({
     ...shorthands.borderRadius("100px"),
     fontSize: "11px",
     fontWeight: 600,
-    backgroundColor: "#dff6dd",
-    color: "#107c10",
-    ...shorthands.border("1px", "solid", "#c8e6c5"),
+    backgroundColor: tokens.colorPaletteGreenBackground1,
+    color: tokens.colorPaletteGreenForeground1,
+    ...shorthands.border("1px", "solid", tokens.colorPaletteGreenBorder2),
   },
   pillAvailable: {
     display: "inline-flex",
@@ -58,9 +59,9 @@ const useStyles = makeStyles({
     ...shorthands.borderRadius("100px"),
     fontSize: "11px",
     fontWeight: 600,
-    backgroundColor: "#e8f0fe",
-    color: "#0f6cbd",
-    ...shorthands.border("1px", "solid", "#c4d9f5"),
+    backgroundColor: tokens.colorPaletteBlueBackground2,
+    color: tokens.colorPaletteBlueForeground2,
+    ...shorthands.border("1px", "solid", tokens.colorPaletteBlueBorderActive),
   },
   pillMissing: {
     display: "inline-flex",
@@ -81,10 +82,10 @@ const useStyles = makeStyles({
     flexShrink: 0,
   },
   dotGranted: {
-    backgroundColor: "#107c10",
+    backgroundColor: tokens.colorPaletteGreenForeground1,
   },
   dotAvailable: {
-    backgroundColor: "#0f6cbd",
+    backgroundColor: tokens.colorPaletteBlueForeground2,
   },
   dotMissing: {
     backgroundColor: tokens.colorNeutralForeground3,

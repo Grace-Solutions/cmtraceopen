@@ -39,10 +39,10 @@ const useStyles = makeStyles({
     ...shorthands.borderRadius("50%"),
   },
   healthDotOk: {
-    backgroundColor: "#107c10",
+    backgroundColor: tokens.colorPaletteGreenForeground1,
   },
   healthDotBad: {
-    backgroundColor: "#c42b1c",
+    backgroundColor: tokens.colorPaletteRedForeground1,
   },
   healthDotUnknown: {
     backgroundColor: tokens.colorNeutralForeground3,
@@ -74,10 +74,10 @@ const useStyles = makeStyles({
     fontWeight: 600,
   },
   healthItemGood: {
-    color: "#107c10",
+    color: tokens.colorPaletteGreenForeground1,
   },
   healthItemBad: {
-    color: "#c42b1c",
+    color: tokens.colorPaletteRedForeground1,
   },
   tablesGrid: {
     display: "grid",
@@ -307,7 +307,7 @@ export function MacosDiagDefenderTab() {
                 key={i}
                 style={{
                   fontSize: metrics.fontSize,
-                  color: "#c42b1c",
+                  color: tokens.colorPaletteRedForeground1,
                   marginBottom: "4px",
                 }}
               >

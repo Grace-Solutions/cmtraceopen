@@ -99,8 +99,8 @@ const useStyles = makeStyles({
     ...shorthands.borderRadius("100px"),
     textTransform: "uppercase" as const,
     letterSpacing: "0.3px",
-    backgroundColor: "#e8f0fe",
-    color: "#0f6cbd",
+    backgroundColor: tokens.colorPaletteBlueBackground2,
+    color: tokens.colorPaletteBlueForeground2,
   },
   sourceBadgeUser: {
     fontSize: "10px",
@@ -109,8 +109,8 @@ const useStyles = makeStyles({
     ...shorthands.borderRadius("100px"),
     textTransform: "uppercase" as const,
     letterSpacing: "0.3px",
-    backgroundColor: "#f3e8fd",
-    color: "#7c3aed",
+    backgroundColor: tokens.colorPalettePurpleBackground2,
+    color: tokens.colorPalettePurpleForeground2,
   },
   centered: {
     display: "flex",

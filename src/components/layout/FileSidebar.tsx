@@ -502,7 +502,7 @@ function LogSidebar() {
         </div>
       )}
 
-      <div style={{ flex: 1, overflow: "auto" }}>
+      <div style={{ flex: 1, overflow: "auto", backgroundColor: tokens.colorNeutralBackground2 }}>
         {!activeSource && (
           <EmptyState
             title="No file source open"
@@ -646,7 +646,7 @@ function IntuneSidebar() {
         />
       )}
 
-      <div style={{ flex: 1, overflow: "auto" }}>
+      <div style={{ flex: 1, overflow: "auto", backgroundColor: tokens.colorNeutralBackground2 }}>
         {!hasIntuneResults && !intuneIsAnalyzing && intuneAnalysisState.phase !== "error" && (
           <EmptyState
             title="No Intune diagnostics data"
@@ -826,7 +826,7 @@ function DsregcmdSidebar() {
         <SidebarActionButton label="Open folder" disabled={isAnalyzing} onClick={() => void openSourceFolderDialog()} />
       </div>
 
-      <div style={{ flex: 1, overflow: "auto" }}>
+      <div style={{ flex: 1, overflow: "auto", backgroundColor: tokens.colorNeutralBackground2 }}>
         {!result && !isAnalyzing && analysisState.phase !== "error" && (
           <EmptyState
             title="No dsregcmd analysis yet"

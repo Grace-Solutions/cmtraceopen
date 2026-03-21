@@ -14,14 +14,14 @@ const useStyles = makeStyles({
     flex: 1,
     ...shorthands.padding("40px"),
     backgroundImage:
-      "linear-gradient(180deg, #fefefe 0%, #f5f6f8 100%)",
+      `linear-gradient(180deg, ${tokens.colorNeutralBackground1} 0%, ${tokens.colorNeutralBackground2} 100%)`,
     textAlign: "center" as const,
   },
   icon: {
     width: "72px",
     height: "72px",
-    backgroundColor: "#fff4ce",
-    ...shorthands.border("2px", "solid", "#f5d89a"),
+    backgroundColor: tokens.colorPaletteYellowBackground1,
+    ...shorthands.border("2px", "solid", tokens.colorPaletteYellowBorder2),
     ...shorthands.borderRadius("20px"),
     display: "flex",
     alignItems: "center",

@@ -56,8 +56,8 @@ const useStyles = makeStyles({
     color: tokens.colorNeutralForeground3,
   },
   countBadgeActive: {
-    backgroundColor: "#e8f0fe",
-    color: "#0f6cbd",
+    backgroundColor: tokens.colorPaletteBlueBackground2,
+    color: tokens.colorPaletteBlueForeground2,
   },
 });
 

@@ -35,10 +35,10 @@ const useStyles = makeStyles({
     width: "10px",
     height: "10px",
     ...shorthands.borderRadius("50%"),
-    backgroundColor: "#107c10",
+    backgroundColor: tokens.colorPaletteGreenForeground1,
   },
   enrollmentDotNotEnrolled: {
-    backgroundColor: "#c42b1c",
+    backgroundColor: tokens.colorPaletteRedForeground1,
   },
   enrollmentLabel: {
     fontSize: "14px",
@@ -120,8 +120,8 @@ const useStyles = makeStyles({
     ...shorthands.borderRadius("100px"),
     textTransform: "uppercase" as const,
     letterSpacing: "0.3px",
-    backgroundColor: "#e8f0fe",
-    color: "#0f6cbd",
+    backgroundColor: tokens.colorPaletteBlueBackground2,
+    color: tokens.colorPaletteBlueForeground2,
   },
   installDate: {
     fontSize: "11px",
@@ -157,7 +157,7 @@ const useStyles = makeStyles({
     fontFamily: tokens.fontFamilyMonospace,
     fontSize: "10.5px",
     color: tokens.colorBrandForeground1,
-    backgroundColor: "#e8f0fe",
+    backgroundColor: tokens.colorPaletteBlueBackground2,
     ...shorthands.padding("1px", "6px"),
     ...shorthands.borderRadius(tokens.borderRadiusSmall),
   },
@@ -234,8 +234,8 @@ const useStyles = makeStyles({
     ...shorthands.borderRadius("100px"),
     textTransform: "uppercase" as const,
     letterSpacing: "0.3px",
-    backgroundColor: "#e6f4ea",
-    color: "#137333",
+    backgroundColor: tokens.colorPaletteGreenBackground1,
+    color: tokens.colorPaletteGreenForeground1,
   },
   sourceBadge: {
     fontSize: "10px",
@@ -244,8 +244,8 @@ const useStyles = makeStyles({
     ...shorthands.borderRadius("100px"),
     textTransform: "uppercase" as const,
     letterSpacing: "0.3px",
-    backgroundColor: "#e8f0fe",
-    color: "#0f6cbd",
+    backgroundColor: tokens.colorPaletteBlueBackground2,
+    color: tokens.colorPaletteBlueForeground2,
   },
   settingsTable: {
     backgroundColor: tokens.colorNeutralBackground1,
@@ -292,7 +292,7 @@ const useStyles = makeStyles({
     wordBreak: "break-all" as const,
   },
   boolTrue: {
-    color: "#137333",
+    color: tokens.colorPaletteGreenForeground1,
     fontWeight: 600,
   },
   boolFalse: {
