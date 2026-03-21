@@ -1,4 +1,4 @@
-import { useCallback, useEffect } from "react";
+import { useCallback, useEffect, useMemo } from "react";
 import {
   Body1,
   Button,
@@ -10,6 +10,7 @@ import {
 import { useMacosDiagStore } from "../../stores/macos-diag-store";
 import { useUiStore } from "../../stores/ui-store";
 import { macosScanIntuneLogs, openLogFile } from "../../lib/commands";
+import { getLogListMetrics } from "../../lib/log-accessibility";
 import { useLogStore } from "../../stores/log-store";
 import type { MacosLogFileEntry } from "../../types/macos-diag";
 
@@ -160,6 +161,8 @@ export function MacosDiagIntuneLogsTab() {
   const setIntuneLogScan = useMacosDiagStore((s) => s.setIntuneLogScan);
   const setLoading = useMacosDiagStore((s) => s.setIntuneLogScanLoading);
   const setActiveView = useUiStore((s) => s.setActiveView);
+  const logListFontSize = useUiStore((s) => s.logListFontSize);
+  const metrics = useMemo(() => getLogListMetrics(logListFontSize), [logListFontSize]);
 
   const scan = useCallback(async () => {
     setLoading(true);
@@ -297,15 +300,15 @@ export function MacosDiagIntuneLogsTab() {
             {files.map((file) => {
               const sourceType = getSourceType(file.sourceDirectory);
               return (
-                <tr key={file.path}>
-                  <td className={`${styles.td} ${styles.mono}`}>
+                <tr key={file.path} style={{ height: metrics.rowHeight }}>
+                  <td className={`${styles.td} ${styles.mono}`} style={{ fontSize: metrics.fontSize }}>
                     {file.fileName}
                   </td>
-                  <td className={styles.td}>{formatFileSize(file.sizeBytes)}</td>
-                  <td className={styles.td}>
+                  <td className={styles.td} style={{ fontSize: metrics.fontSize }}>{formatFileSize(file.sizeBytes)}</td>
+                  <td className={styles.td} style={{ fontSize: metrics.fontSize }}>
                     {formatDate(file.modifiedUnixMs)}
                   </td>
-                  <td className={styles.td}>
+                  <td className={styles.td} style={{ fontSize: metrics.fontSize }}>
                     <span
                       className={
                         sourceType === "system"
@@ -316,7 +319,7 @@ export function MacosDiagIntuneLogsTab() {
                       {sourceType}
                     </span>
                   </td>
-                  <td className={styles.td}>
+                  <td className={styles.td} style={{ fontSize: metrics.fontSize }}>
                     <Button
                       size="small"
                       appearance="primary"
@@ -330,7 +333,7 @@ export function MacosDiagIntuneLogsTab() {
             })}
             {files.length === 0 && (
               <tr>
-                <td className={styles.td} colSpan={5} style={{ textAlign: "center" }}>
+                <td className={styles.td} colSpan={5} style={{ textAlign: "center", fontSize: metrics.fontSize }}>
                   No Intune log files found
                 </td>
               </tr>

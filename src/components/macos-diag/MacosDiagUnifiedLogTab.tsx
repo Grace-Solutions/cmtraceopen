@@ -1,4 +1,4 @@
-import { useCallback, useRef, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import {
   Body1,
   Button,
@@ -9,7 +9,9 @@ import {
 } from "@fluentui/react-components";
 import { useVirtualizer } from "@tanstack/react-virtual";
 import { useMacosDiagStore } from "../../stores/macos-diag-store";
+import { useUiStore } from "../../stores/ui-store";
 import { macosQueryUnifiedLog } from "../../lib/commands";
+import { getLogListMetrics } from "../../lib/log-accessibility";
 
 const PRESETS = [
   { id: "mdm-client", label: "MDM Client (mdmclient)" },
@@ -25,8 +27,6 @@ const TIME_RANGES = [
   { label: "Last 6 hours", minutes: 360 },
   { label: "Last 24 hours", minutes: 1440 },
 ] as const;
-
-const ROW_HEIGHT = 36;
 
 const useStyles = makeStyles({
   controls: {
@@ -132,6 +132,29 @@ const useStyles = makeStyles({
     textTransform: "uppercase" as const,
     letterSpacing: "0.4px",
     flexShrink: 0,
+    position: "relative" as const,
+    userSelect: "none" as const,
+  },
+  resizeHandle: {
+    position: "absolute" as const,
+    right: 0,
+    top: 0,
+    bottom: 0,
+    width: "5px",
+    cursor: "col-resize",
+    backgroundColor: "transparent",
+    ":hover": {
+      backgroundColor: tokens.colorBrandStroke1,
+    },
+  },
+  resizeHandleActive: {
+    position: "absolute" as const,
+    right: 0,
+    top: 0,
+    bottom: 0,
+    width: "5px",
+    cursor: "col-resize",
+    backgroundColor: tokens.colorBrandStroke1,
   },
   scrollContainer: {
     flex: 1,
@@ -157,17 +180,14 @@ const useStyles = makeStyles({
     whiteSpace: "nowrap" as const,
   },
   cellTimestamp: {
-    width: "170px",
     fontFamily: tokens.fontFamilyMonospace,
     fontSize: "11px",
   },
   cellProcess: {
-    width: "140px",
     fontFamily: tokens.fontFamilyMonospace,
     fontSize: "11px",
   },
   cellLevel: {
-    width: "80px",
   },
   cellMessage: {
     flex: 1,
@@ -258,9 +278,42 @@ export function MacosDiagUnifiedLogTab() {
   const setUnifiedLogResult = useMacosDiagStore((s) => s.setUnifiedLogResult);
   const setLoading = useMacosDiagStore((s) => s.setUnifiedLogLoading);
   const setPresetId = useMacosDiagStore((s) => s.setUnifiedLogPresetId);
+  const logListFontSize = useUiStore((s) => s.logListFontSize);
+  const metrics = useMemo(() => getLogListMetrics(logListFontSize), [logListFontSize]);
 
   const [timeRangeMinutes, setTimeRangeMinutes] = useState(60);
   const [maxResults, setMaxResults] = useState(5000);
+
+  // Column resize state
+  const [colWidths, setColWidths] = useState({ timestamp: 170, process: 140, level: 80 });
+  const resizeRef = useRef<{ col: keyof typeof colWidths; startX: number; startWidth: number } | null>(null);
+
+  const onResizeStart = useCallback(
+    (col: keyof typeof colWidths, e: React.MouseEvent) => {
+      e.preventDefault();
+      resizeRef.current = { col, startX: e.clientX, startWidth: colWidths[col] };
+    },
+    [colWidths]
+  );
+
+  useEffect(() => {
+    const onMouseMove = (e: MouseEvent) => {
+      if (!resizeRef.current) return;
+      const { col, startX, startWidth } = resizeRef.current;
+      const delta = e.clientX - startX;
+      const newWidth = Math.max(50, startWidth + delta);
+      setColWidths((prev) => ({ ...prev, [col]: newWidth }));
+    };
+    const onMouseUp = () => {
+      resizeRef.current = null;
+    };
+    window.addEventListener("mousemove", onMouseMove);
+    window.addEventListener("mouseup", onMouseUp);
+    return () => {
+      window.removeEventListener("mousemove", onMouseMove);
+      window.removeEventListener("mouseup", onMouseUp);
+    };
+  }, []);
 
   const scrollRef = useRef<HTMLDivElement>(null);
 
@@ -269,7 +322,7 @@ export function MacosDiagUnifiedLogTab() {
   const virtualizer = useVirtualizer({
     count: entries.length,
     getScrollElement: () => scrollRef.current,
-    estimateSize: () => ROW_HEIGHT,
+    estimateSize: () => metrics.rowHeight,
     overscan: 20,
   });
 
@@ -375,21 +428,33 @@ export function MacosDiagUnifiedLogTab() {
           <div className={styles.headerRow}>
             <div
               className={styles.headerCell}
-              style={{ width: "170px" }}
+              style={{ width: `${colWidths.timestamp}px` }}
             >
               Timestamp
+              <div
+                className={resizeRef.current?.col === "timestamp" ? styles.resizeHandleActive : styles.resizeHandle}
+                onMouseDown={(e) => onResizeStart("timestamp", e)}
+              />
             </div>
             <div
               className={styles.headerCell}
-              style={{ width: "140px" }}
+              style={{ width: `${colWidths.process}px` }}
             >
               Process
+              <div
+                className={resizeRef.current?.col === "process" ? styles.resizeHandleActive : styles.resizeHandle}
+                onMouseDown={(e) => onResizeStart("process", e)}
+              />
             </div>
             <div
               className={styles.headerCell}
-              style={{ width: "80px" }}
+              style={{ width: `${colWidths.level}px` }}
             >
               Level
+              <div
+                className={resizeRef.current?.col === "level" ? styles.resizeHandleActive : styles.resizeHandle}
+                onMouseDown={(e) => onResizeStart("level", e)}
+              />
             </div>
             <div
               className={styles.headerCell}
@@ -425,21 +490,27 @@ export function MacosDiagUnifiedLogTab() {
                   >
                     <div
                       className={`${styles.cell} ${styles.cellTimestamp}`}
+                      style={{ width: `${colWidths.timestamp}px`, fontSize: metrics.fontSize - 2 }}
                     >
                       {entry.timestamp}
                     </div>
                     <div
                       className={`${styles.cell} ${styles.cellProcess}`}
+                      style={{ width: `${colWidths.process}px`, fontSize: metrics.fontSize - 2 }}
                     >
                       {entry.process}
                     </div>
-                    <div className={`${styles.cell} ${styles.cellLevel}`}>
+                    <div
+                      className={`${styles.cell} ${styles.cellLevel}`}
+                      style={{ width: `${colWidths.level}px` }}
+                    >
                       <span className={getLevelClass(entry.level, styles)}>
                         {entry.level}
                       </span>
                     </div>
                     <div
                       className={`${styles.cell} ${styles.cellMessage}`}
+                      style={{ fontSize: metrics.fontSize }}
                       title={entry.message}
                     >
                       {entry.message}

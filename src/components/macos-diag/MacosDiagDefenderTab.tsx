@@ -1,4 +1,4 @@
-import { useCallback, useEffect } from "react";
+import { useCallback, useEffect, useMemo } from "react";
 import {
   Body1,
   Button,
@@ -11,6 +11,7 @@ import { useMacosDiagStore } from "../../stores/macos-diag-store";
 import { useUiStore } from "../../stores/ui-store";
 import { useLogStore } from "../../stores/log-store";
 import { macosInspectDefender, openLogFile } from "../../lib/commands";
+import { getLogListMetrics } from "../../lib/log-accessibility";
 import type { MacosLogFileEntry } from "../../types/macos-diag";
 
 const useStyles = makeStyles({
@@ -153,6 +154,8 @@ export function MacosDiagDefenderTab() {
   const setDefenderResult = useMacosDiagStore((s) => s.setDefenderResult);
   const setLoading = useMacosDiagStore((s) => s.setDefenderLoading);
   const setActiveView = useUiStore((s) => s.setActiveView);
+  const logListFontSize = useUiStore((s) => s.logListFontSize);
+  const metrics = useMemo(() => getLogListMetrics(logListFontSize), [logListFontSize]);
 
   const fetch = useCallback(async () => {
     setLoading(true);
@@ -279,7 +282,7 @@ export function MacosDiagDefenderTab() {
           <div className={styles.healthGrid}>
             {healthRows.map((row) => (
               <div key={row.label} className={styles.healthItem}>
-                <span className={styles.healthItemLabel}>{row.label}</span>
+                <span className={styles.healthItemLabel} style={{ fontSize: metrics.fontSize }}>{row.label}</span>
                 <span
                   className={`${styles.healthItemValue} ${
                     row.good === true
@@ -288,6 +291,7 @@ export function MacosDiagDefenderTab() {
                         ? styles.healthItemBad
                         : ""
                   }`}
+                  style={{ fontSize: metrics.fontSize }}
                 >
                   {row.value}
                 </span>
@@ -302,7 +306,7 @@ export function MacosDiagDefenderTab() {
               <div
                 key={i}
                 style={{
-                  fontSize: "12px",
+                  fontSize: metrics.fontSize,
                   color: "#c42b1c",
                   marginBottom: "4px",
                 }}
@@ -330,14 +334,14 @@ export function MacosDiagDefenderTab() {
             </thead>
             <tbody>
               {logFiles.map((file) => (
-                <tr key={file.path}>
-                  <td className={`${styles.td} ${styles.mono}`}>
+                <tr key={file.path} style={{ height: metrics.rowHeight }}>
+                  <td className={`${styles.td} ${styles.mono}`} style={{ fontSize: metrics.fontSize }}>
                     {file.fileName}
                   </td>
-                  <td className={styles.td}>
+                  <td className={styles.td} style={{ fontSize: metrics.fontSize }}>
                     {formatFileSize(file.sizeBytes)}
                   </td>
-                  <td className={styles.td}>
+                  <td className={styles.td} style={{ fontSize: metrics.fontSize }}>
                     <Button
                       size="small"
                       appearance="subtle"
@@ -350,7 +354,7 @@ export function MacosDiagDefenderTab() {
               ))}
               {logFiles.length === 0 && (
                 <tr>
-                  <td className={styles.td} colSpan={3} style={{ textAlign: "center" }}>
+                  <td className={styles.td} colSpan={3} style={{ textAlign: "center", fontSize: metrics.fontSize }}>
                     No log files found
                   </td>
                 </tr>
@@ -373,14 +377,14 @@ export function MacosDiagDefenderTab() {
             </thead>
             <tbody>
               {diagFiles.map((file) => (
-                <tr key={file.path}>
-                  <td className={`${styles.td} ${styles.mono}`}>
+                <tr key={file.path} style={{ height: metrics.rowHeight }}>
+                  <td className={`${styles.td} ${styles.mono}`} style={{ fontSize: metrics.fontSize }}>
                     {file.fileName}
                   </td>
-                  <td className={styles.td}>
+                  <td className={styles.td} style={{ fontSize: metrics.fontSize }}>
                     {formatFileSize(file.sizeBytes)}
                   </td>
-                  <td className={styles.td}>
+                  <td className={styles.td} style={{ fontSize: metrics.fontSize }}>
                     <Button
                       size="small"
                       appearance="subtle"
@@ -393,7 +397,7 @@ export function MacosDiagDefenderTab() {
               ))}
               {diagFiles.length === 0 && (
                 <tr>
-                  <td className={styles.td} colSpan={3} style={{ textAlign: "center" }}>
+                  <td className={styles.td} colSpan={3} style={{ textAlign: "center", fontSize: metrics.fontSize }}>
                     No diagnostic files found
                   </td>
                 </tr>

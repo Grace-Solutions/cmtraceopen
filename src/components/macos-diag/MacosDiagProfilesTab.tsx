@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useState } from "react";
+import { useCallback, useEffect, useMemo, useState } from "react";
 import {
   Body1,
   Button,
@@ -8,7 +8,9 @@ import {
   tokens,
 } from "@fluentui/react-components";
 import { useMacosDiagStore } from "../../stores/macos-diag-store";
+import { useUiStore } from "../../stores/ui-store";
 import { macosListProfiles } from "../../lib/commands";
+import { getLogListMetrics } from "../../lib/log-accessibility";
 
 const useStyles = makeStyles({
   enrollmentCard: {
@@ -171,6 +173,8 @@ export function MacosDiagProfilesTab() {
   const loading = useMacosDiagStore((s) => s.profilesLoading);
   const setProfilesResult = useMacosDiagStore((s) => s.setProfilesResult);
   const setLoading = useMacosDiagStore((s) => s.setProfilesLoading);
+  const logListFontSize = useUiStore((s) => s.logListFontSize);
+  const metrics = useMemo(() => getLogListMetrics(logListFontSize), [logListFontSize]);
 
   const [expandedProfiles, setExpandedProfiles] = useState<Set<string>>(
     new Set()
@@ -243,7 +247,7 @@ export function MacosDiagProfilesTab() {
           </div>
         </div>
         {enrollmentStatus.mdmServer && (
-          <div className={styles.enrollmentDetail}>
+          <div className={styles.enrollmentDetail} style={{ fontSize: metrics.fontSize }}>
             MDM Server:{" "}
             <span className={styles.enrollmentDetailStrong}>
               {enrollmentStatus.mdmServer}
@@ -251,7 +255,7 @@ export function MacosDiagProfilesTab() {
           </div>
         )}
         {enrollmentStatus.enrollmentType && (
-          <div className={styles.enrollmentDetail}>
+          <div className={styles.enrollmentDetail} style={{ fontSize: metrics.fontSize }}>
             Enrollment Type:{" "}
             <span className={styles.enrollmentDetailStrong}>
               {enrollmentStatus.enrollmentType}
@@ -284,10 +288,10 @@ export function MacosDiagProfilesTab() {
                 onClick={() => toggleProfile(profile.profileIdentifier)}
               >
                 <div>
-                  <div className={styles.profileCardName}>
+                  <div className={styles.profileCardName} style={{ fontSize: metrics.fontSize }}>
                     {profile.profileDisplayName}
                   </div>
-                  <div className={styles.profileCardId}>
+                  <div className={styles.profileCardId} style={{ fontSize: metrics.fontSize - 2 }}>
                     {profile.profileIdentifier}
                   </div>
                 </div>
@@ -296,7 +300,7 @@ export function MacosDiagProfilesTab() {
                     <span className={styles.managedBadge}>Managed</span>
                   )}
                   {profile.installDate && (
-                    <span className={styles.installDate}>
+                    <span className={styles.installDate} style={{ fontSize: metrics.fontSize - 2 }}>
                       Installed {profile.installDate}
                     </span>
                   )}
@@ -315,6 +319,7 @@ export function MacosDiagProfilesTab() {
                       <div
                         key={payload.payloadIdentifier}
                         className={styles.payloadItem}
+                        style={{ fontSize: metrics.fontSize }}
                       >
                         <span>
                           {payload.payloadDisplayName ?? payload.payloadIdentifier}

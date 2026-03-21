@@ -1,4 +1,4 @@
-import { useCallback, useEffect } from "react";
+import { useCallback, useEffect, useMemo } from "react";
 import {
   Body1,
   Button,
@@ -8,11 +8,13 @@ import {
   tokens,
 } from "@fluentui/react-components";
 import { useMacosDiagStore } from "../../stores/macos-diag-store";
+import { useUiStore } from "../../stores/ui-store";
 import {
   macosListPackages,
   macosGetPackageInfo,
   macosGetPackageFiles,
 } from "../../lib/commands";
+import { getLogListMetrics } from "../../lib/log-accessibility";
 
 const useStyles = makeStyles({
   statCards: {
@@ -190,6 +192,8 @@ export function MacosDiagPackagesTab() {
   const setPackageDrillLoading = useMacosDiagStore(
     (s) => s.setPackageDrillLoading
   );
+  const logListFontSize = useUiStore((s) => s.logListFontSize);
+  const metrics = useMemo(() => getLogListMetrics(logListFontSize), [logListFontSize]);
 
   const fetch = useCallback(async () => {
     setLoading(true);
@@ -311,12 +315,13 @@ export function MacosDiagPackagesTab() {
                 className={
                   selectedPackageId === pkg.packageId ? styles.trSelected : ""
                 }
+                style={{ height: metrics.rowHeight }}
               >
-                <td className={`${styles.td} ${styles.mono}`}>
+                <td className={`${styles.td} ${styles.mono}`} style={{ fontSize: metrics.fontSize }}>
                   {pkg.packageId}
                 </td>
-                <td className={styles.td}>{pkg.version}</td>
-                <td className={styles.td}>
+                <td className={styles.td} style={{ fontSize: metrics.fontSize }}>{pkg.version}</td>
+                <td className={styles.td} style={{ fontSize: metrics.fontSize }}>
                   {pkg.installTime
                     ? new Date(pkg.installTime).toLocaleDateString("en-US", {
                         month: "short",
@@ -325,7 +330,7 @@ export function MacosDiagPackagesTab() {
                       })
                     : "--"}
                 </td>
-                <td className={styles.td}>
+                <td className={styles.td} style={{ fontSize: metrics.fontSize }}>
                   <Button
                     size="small"
                     appearance={
@@ -345,7 +350,7 @@ export function MacosDiagPackagesTab() {
                 <td
                   className={styles.td}
                   colSpan={4}
-                  style={{ textAlign: "center" }}
+                  style={{ textAlign: "center", fontSize: metrics.fontSize }}
                 >
                   No Microsoft packages found
                 </td>
@@ -380,25 +385,25 @@ export function MacosDiagPackagesTab() {
               <div className={styles.pkgDetailGrid}>
                 <div className={styles.pkgDetailItem}>
                   <div className={styles.pkgDetailLabel}>Version</div>
-                  <div className={styles.pkgDetailValue}>
+                  <div className={styles.pkgDetailValue} style={{ fontSize: metrics.fontSize }}>
                     {selectedPackageInfo.version}
                   </div>
                 </div>
                 <div className={styles.pkgDetailItem}>
                   <div className={styles.pkgDetailLabel}>Volume</div>
-                  <div className={styles.pkgDetailValue}>
+                  <div className={styles.pkgDetailValue} style={{ fontSize: metrics.fontSize }}>
                     {selectedPackageInfo.volume ?? "/"}
                   </div>
                 </div>
                 <div className={styles.pkgDetailItem}>
                   <div className={styles.pkgDetailLabel}>Location</div>
-                  <div className={styles.pkgDetailValue}>
+                  <div className={styles.pkgDetailValue} style={{ fontSize: metrics.fontSize }}>
                     {selectedPackageInfo.location ?? "--"}
                   </div>
                 </div>
                 <div className={styles.pkgDetailItem}>
                   <div className={styles.pkgDetailLabel}>Install Time</div>
-                  <div className={styles.pkgDetailValue}>
+                  <div className={styles.pkgDetailValue} style={{ fontSize: metrics.fontSize }}>
                     {selectedPackageInfo.installTime ?? "--"}
                   </div>
                 </div>
@@ -409,7 +414,7 @@ export function MacosDiagPackagesTab() {
                   <div className={styles.fileListLabel}>
                     Installed Files ({selectedPackageFiles.fileCount})
                   </div>
-                  <div className={styles.fileList}>
+                  <div className={styles.fileList} style={{ fontSize: metrics.fontSize - 2 }}>
                     {selectedPackageFiles.files.join("\n")}
                   </div>
                 </>
