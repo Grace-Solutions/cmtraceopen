@@ -41,10 +41,13 @@ pub fn macos_query_unified_log(
     time_range: Option<MacosUnifiedLogTimeRange>,
     result_cap: Option<usize>,
 ) -> Result<MacosUnifiedLogResult, String> {
+    // Clamp result_cap to a reasonable range to avoid excessive resource usage
+    let capped = result_cap.unwrap_or(5000).clamp(1, 50_000);
+
     crate::macos_diag::unified_log::query_unified_log_impl(
         &preset_id,
         time_range,
-        result_cap.unwrap_or(5000),
+        capped,
     )
 }
 

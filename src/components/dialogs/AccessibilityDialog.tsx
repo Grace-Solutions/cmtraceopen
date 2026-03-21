@@ -1,4 +1,5 @@
 import { useEffect, useRef } from "react";
+import { tokens } from "@fluentui/react-components";
 import {
   DEFAULT_LOG_DETAILS_FONT_SIZE,
   DEFAULT_LOG_LIST_FONT_SIZE,
@@ -200,7 +201,7 @@ export function AccessibilityDialog({ isOpen, onClose }: AccessibilityDialogProp
           <div style={{ fontSize: "13px", fontWeight: 700, marginBottom: "8px" }}>
             Severity colors
           </div>
-          <div style={{ fontSize: "12px", color: "#555" }}>
+          <div style={{ fontSize: "12px", color: tokens.colorNeutralForeground3 }}>
             Severity colors are now controlled by the active theme. Use the theme picker in the toolbar to switch themes.
           </div>
         </section>

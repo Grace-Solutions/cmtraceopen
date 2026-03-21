@@ -144,10 +144,13 @@ function formatDate(unixMs: number | null): string {
 
 function getSourceType(sourceDirectory: string): "system" | "user" {
   const lower = sourceDirectory.toLowerCase();
+  // Check for user home paths first to avoid misclassifying ~/Library/Logs as system
+  if (lower.startsWith("/users/") || lower.startsWith("~/")) {
+    return "user";
+  }
   if (
-    lower.includes("/library/logs") ||
-    lower.includes("/var/log") ||
-    lower.includes("system")
+    lower.startsWith("/library/logs") ||
+    lower.startsWith("/var/log")
   ) {
     return "system";
   }

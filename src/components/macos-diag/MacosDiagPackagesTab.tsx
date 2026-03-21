@@ -276,8 +276,11 @@ export function MacosDiagPackagesTab() {
         macosGetPackageInfo(packageId),
         macosGetPackageFiles(packageId),
       ]);
-      setSelectedPackageInfo(info);
-      setSelectedPackageFiles(files);
+      // Guard against race condition: only update if this package is still selected
+      if (useMacosDiagStore.getState().selectedPackageId === packageId) {
+        setSelectedPackageInfo(info);
+        setSelectedPackageFiles(files);
+      }
     } catch (err) {
       console.error("[macos-diag] package details fetch failed", err);
     } finally {

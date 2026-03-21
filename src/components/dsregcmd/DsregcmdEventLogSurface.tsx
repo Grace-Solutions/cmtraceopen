@@ -195,9 +195,9 @@ export function DsregcmdEventLogSurface({ eventLogAnalysis }: DsregcmdEventLogSu
                 fontSize: 11,
                 padding: "2px 8px",
                 borderRadius: 4,
-                border: isActive ? "1px solid #2563eb" : `1px solid ${tokens.colorNeutralStroke2}`,
+                border: isActive ? `1px solid ${tokens.colorBrandStroke1}` : `1px solid ${tokens.colorNeutralStroke2}`,
                 background: isActive ? tokens.colorPaletteBlueBackground2 : tokens.colorNeutralCardBackground,
-                color: isActive ? tokens.colorBrandForeground1 : "#374151",
+                color: isActive ? tokens.colorBrandForeground1 : tokens.colorNeutralForeground2,
                 cursor: "pointer",
                 whiteSpace: "nowrap",
               }}
