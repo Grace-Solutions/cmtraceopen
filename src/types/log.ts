@@ -95,6 +95,7 @@ export interface ErrorCodeSpan {
   start: number;
   end: number;
   codeHex: string;
+  codeDecimal: string;
   description: string;
   category: string;
 }

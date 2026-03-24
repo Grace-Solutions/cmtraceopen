@@ -1,8 +1,15 @@
 use once_cell::sync::Lazy;
 use regex::Regex;
+use std::collections::HashMap;
 
 use super::codes::{ErrorCode, ERROR_CODES};
 use serde::{Deserialize, Serialize};
+
+/// Pre-built HashMap from error code values to their ErrorCode entries.
+/// Provides O(1) lookup instead of linear scan over the array.
+static CODE_MAP: Lazy<HashMap<u32, &'static ErrorCode>> = Lazy::new(|| {
+    ERROR_CODES.iter().map(|ec| (ec.code, ec)).collect()
+});
 
 /// Look up an error code with HRESULT decomposition.
 /// Tries direct hit first. If miss and code is FACILITY_WIN32 (0x8007xxxx),
@@ -10,8 +17,8 @@ use serde::{Deserialize, Serialize};
 /// Conversely, if the code is a small Win32 value (<=0xFFFF), tries its
 /// HRESULT form (0x80070000 | code).
 fn find_error_code(code: u32) -> Option<&'static ErrorCode> {
-    // Direct table hit
-    if let Some(ec) = ERROR_CODES.iter().find(|ec| ec.code == code) {
+    // Direct table hit (O(1) via HashMap)
+    if let Some(ec) = CODE_MAP.get(&code) {
         return Some(ec);
     }
 
@@ -20,7 +27,7 @@ fn find_error_code(code: u32) -> Option<&'static ErrorCode> {
     // HRESULT wrapper in the table.
     if (code & 0xFFFF_0000) == 0x8007_0000 {
         let win32_code = code & 0x0000_FFFF;
-        if let Some(ec) = ERROR_CODES.iter().find(|ec| ec.code == win32_code) {
+        if let Some(ec) = CODE_MAP.get(&win32_code) {
             return Some(ec);
         }
     }
@@ -28,7 +35,7 @@ fn find_error_code(code: u32) -> Option<&'static ErrorCode> {
     // Reverse: if user typed a small Win32 code (e.g., 5), try its HRESULT form
     if code <= 0xFFFF {
         let hresult = 0x8007_0000 | code;
-        if let Some(ec) = ERROR_CODES.iter().find(|ec| ec.code == hresult) {
+        if let Some(ec) = CODE_MAP.get(&hresult) {
             return Some(ec);
         }
     }
@@ -42,6 +49,7 @@ pub struct ErrorCodeSpan {
     pub start: usize,
     pub end: usize,
     pub code_hex: String,
+    pub code_decimal: String,
     pub description: String,
     pub category: String,
 }
@@ -72,6 +80,7 @@ pub fn detect_error_code_spans(message: &str) -> Vec<ErrorCodeSpan> {
                 start: char_start,
                 end: char_end,
                 code_hex: format!("0x{:08X}", ec.code),
+                code_decimal: format!("{}", ec.code as i32),
                 description: ec.description.to_string(),
                 category: ec.category.label().to_string(),
             })
@@ -79,6 +88,7 @@ pub fn detect_error_code_spans(message: &str) -> Vec<ErrorCodeSpan> {
         .collect()
 }
 
+/// Result type shared by both exact lookup and search operations.
 #[derive(Debug, Clone, Serialize, Deserialize)]
 #[serde(rename_all = "camelCase")]
 pub struct ErrorLookupResult {
@@ -89,15 +99,8 @@ pub struct ErrorLookupResult {
     pub found: bool,
 }
 
-#[derive(Debug, Clone, Serialize, Deserialize)]
-#[serde(rename_all = "camelCase")]
-pub struct ErrorSearchResult {
-    pub code_hex: String,
-    pub code_decimal: String,
-    pub description: String,
-    pub category: String,
-    pub found: bool,
-}
+/// Alias for backward compatibility with IPC commands that reference `ErrorSearchResult`.
+pub type ErrorSearchResult = ErrorLookupResult;
 
 /// Try to parse an input string as an error code (hex or decimal).
 /// Accepts formats: "0x80070005", "80070005", "-2147024891", "2147942405"
@@ -185,16 +188,19 @@ pub fn search_error_codes(query: &str) -> Vec<ErrorSearchResult> {
         }];
     }
 
-    // Substring search across descriptions
+    // Substring search across descriptions and category labels
     let query_lower = query.to_lowercase();
     let mut results: Vec<(usize, &super::codes::ErrorCode)> = ERROR_CODES
         .iter()
         .filter_map(|ec| {
             let desc_lower = ec.description.to_lowercase();
+            let cat_lower = ec.category.label().to_lowercase();
             if desc_lower.starts_with(&query_lower) {
-                Some((0, ec))
+                Some((0, ec)) // description prefix match (highest priority)
             } else if desc_lower.contains(&query_lower) {
-                Some((1, ec))
+                Some((1, ec)) // description substring match
+            } else if cat_lower.contains(&query_lower) {
+                Some((2, ec)) // category label match (lowest priority)
             } else {
                 None
             }

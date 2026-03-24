@@ -61,7 +61,7 @@ pub static ERROR_CODES: &[ErrorCode] = &[
     ErrorCode { code: 0x8000FFFF, description: "E_UNEXPECTED - Unexpected failure", category: ErrorCategory::Windows },
     ErrorCode { code: 0x80010105, description: "RPC_E_SERVERFAULT - The server threw an exception", category: ErrorCategory::Windows },
     ErrorCode { code: 0x80010108, description: "RPC_E_DISCONNECTED - The object invoked has disconnected from its clients", category: ErrorCategory::Windows },
-    ErrorCode { code: 0x8001010D, description: "RPC_E_SERVERFAULT - The server threw an exception", category: ErrorCategory::Windows },
+    ErrorCode { code: 0x8001010D, description: "RPC_E_SERVERCALL_RETRYLATER - The callee (server) is not available and disappeared; all connections are invalid", category: ErrorCategory::Windows },
     ErrorCode { code: 0x800401F0, description: "CO_E_NOTINITIALIZED - COM not initialized", category: ErrorCategory::Windows },
     ErrorCode { code: 0x80040154, description: "REGDB_E_CLASSNOTREG - Class not registered", category: ErrorCategory::Windows },
     ErrorCode { code: 0x80040201, description: "CACHE_E_NOCACHE_UPDATED - No cache updated", category: ErrorCategory::Windows },

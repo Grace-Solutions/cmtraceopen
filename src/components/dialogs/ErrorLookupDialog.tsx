@@ -78,7 +78,7 @@ const isCodePattern = (q: string): boolean => {
   return (
     trimmed.startsWith("0x") ||
     trimmed.startsWith("0X") ||
-    trimmed.startsWith("-") ||
+    /^-\d/.test(trimmed) ||
     (trimmed.length >= 6 && /^[0-9A-Fa-f]+$/.test(trimmed))
   );
 };

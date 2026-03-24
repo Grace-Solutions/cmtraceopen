@@ -68,13 +68,9 @@ export function LogListView() {
     if (!useUiStore.getState().showInfoPane) {
       useUiStore.getState().toggleInfoPane();
     }
-    // Convert span to focused error code format
-    const codeVal = parseInt(span.codeHex, 16);
     useUiStore.getState().setFocusedErrorCode({
       codeHex: span.codeHex,
-      codeDecimal: String(
-        codeVal > 0x7fffffff ? codeVal - 0x100000000 : codeVal
-      ),
+      codeDecimal: span.codeDecimal,
       description: span.description,
       category: span.category,
     });
