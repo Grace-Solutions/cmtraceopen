@@ -1,5 +1,41 @@
+use once_cell::sync::Lazy;
+use regex::Regex;
+
 use super::codes::ERROR_CODES;
 use serde::{Deserialize, Serialize};
+
+#[derive(Debug, Clone, Serialize, Deserialize)]
+#[serde(rename_all = "camelCase")]
+pub struct ErrorCodeSpan {
+    pub start: usize,
+    pub end: usize,
+    pub code_hex: String,
+    pub description: String,
+    pub category: String,
+}
+
+static HEX_CODE_RE: Lazy<Regex> =
+    Lazy::new(|| Regex::new(r"0[xX][0-9A-Fa-f]{8}").unwrap());
+
+/// Scan a message string for recognized error codes and return their spans.
+/// Only returns spans for codes that exist in the error database.
+pub fn detect_error_code_spans(message: &str) -> Vec<ErrorCodeSpan> {
+    HEX_CODE_RE
+        .find_iter(message)
+        .filter_map(|m| {
+            let hex_str = &message[m.start()..m.end()];
+            let code_val = u32::from_str_radix(&hex_str[2..], 16).ok()?;
+            let ec = ERROR_CODES.iter().find(|ec| ec.code == code_val)?;
+            Some(ErrorCodeSpan {
+                start: m.start(),
+                end: m.end(),
+                code_hex: format!("0x{:08X}", ec.code),
+                description: ec.description.to_string(),
+                category: ec.category.label().to_string(),
+            })
+        })
+        .collect()
+}
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
 #[serde(rename_all = "camelCase")]
@@ -243,5 +279,34 @@ mod tests {
     fn test_search_max_results() {
         let results = search_error_codes("error");
         assert!(results.len() <= 50, "Should cap at 50 results");
+    }
+
+    #[test]
+    fn test_detect_error_code_spans() {
+        let spans = detect_error_code_spans("Failed with error 0x80070005 during install");
+        assert_eq!(spans.len(), 1);
+        assert_eq!(spans[0].start, 18);
+        assert_eq!(spans[0].end, 28);
+        assert_eq!(spans[0].code_hex, "0x80070005");
+        assert!(spans[0].description.contains("Access is denied"));
+        assert_eq!(spans[0].category, "Windows");
+    }
+
+    #[test]
+    fn test_detect_multiple_error_code_spans() {
+        let spans = detect_error_code_spans("Error 0x80070005 and then 0x80070002");
+        assert_eq!(spans.len(), 2);
+    }
+
+    #[test]
+    fn test_detect_no_error_code_spans() {
+        let spans = detect_error_code_spans("Everything is fine, no errors here");
+        assert!(spans.is_empty());
+    }
+
+    #[test]
+    fn test_detect_unrecognized_code_ignored() {
+        let spans = detect_error_code_spans("Code 0xDEADBEEF is not in our database");
+        assert!(spans.is_empty());
     }
 }

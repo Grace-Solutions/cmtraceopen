@@ -1,7 +1,7 @@
 mod commands;
 pub mod dsregcmd;
 pub mod macos_diag;
-mod error_db;
+pub mod error_db;
 pub mod intune;
 mod menu;
 mod models;
