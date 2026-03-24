@@ -93,6 +93,12 @@ interface UiState {
   logDetailsFontSize: number;
   themeId: ThemeId;
   errorLookupHistory: ErrorLookupHistoryEntry[];
+  focusedErrorCode: {
+    codeHex: string;
+    codeDecimal: string;
+    description: string;
+    category: string;
+  } | null;
 
   setActiveWorkspace: (workspace: WorkspaceId) => void;
   setActiveView: (view: AppView) => void;
@@ -116,6 +122,14 @@ interface UiState {
   resetLogDetailsFontSize: () => void;
   setThemeId: (id: ThemeId) => void;
   resetLogAccessibilityPreferences: () => void;
+  setFocusedErrorCode: (
+    code: {
+      codeHex: string;
+      codeDecimal: string;
+      description: string;
+      category: string;
+    } | null
+  ) => void;
   addErrorLookupHistoryEntry: (entry: ErrorLookupHistoryEntry) => void;
   clearErrorLookupHistory: () => void;
   closeTransientDialogs: (trigger: string) => void;
@@ -173,6 +187,7 @@ export const useUiStore = create<UiState>()(
       logDetailsFontSize: DEFAULT_LOG_DETAILS_FONT_SIZE,
       themeId: DEFAULT_THEME_ID,
       errorLookupHistory: [],
+      focusedErrorCode: null,
 
       setActiveWorkspace: (workspace) => {
         const previousWorkspace = get().activeWorkspace;
@@ -247,6 +262,7 @@ export const useUiStore = create<UiState>()(
           logDetailsFontSize: DEFAULT_LOG_DETAILS_FONT_SIZE,
           themeId: DEFAULT_THEME_ID,
         }),
+      setFocusedErrorCode: (code) => set({ focusedErrorCode: code }),
       addErrorLookupHistoryEntry: (entry) =>
         set((state) => ({
           errorLookupHistory: [
