@@ -10,7 +10,7 @@ import type { ThemeId } from "../lib/themes/types";
 import { DEFAULT_THEME_ID } from "../lib/themes";
 
 export type IntuneWorkspaceId = "intune" | "new-intune";
-export type WorkspaceId = "log" | IntuneWorkspaceId | "dsregcmd" | "macos-diag";
+export type WorkspaceId = "log" | IntuneWorkspaceId | "dsregcmd" | "macos-diag" | "deployment";
 export type AppView = WorkspaceId;
 
 export interface TabState {
@@ -65,6 +65,14 @@ export function getUiChromeStatus(
       viewLabel: "macOS Diagnostics workspace",
       detailsLabel: "Details hidden in macOS Diagnostics workspace",
       infoLabel: "Info hidden in macOS Diagnostics workspace",
+    };
+  }
+
+  if (activeView === "deployment") {
+    return {
+      viewLabel: "Software Deployment workspace",
+      detailsLabel: "Details hidden in Software Deployment workspace",
+      infoLabel: "Info hidden in Software Deployment workspace",
     };
   }
 
