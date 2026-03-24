@@ -410,7 +410,44 @@ export async function loadSelectedLogFile(
 ): Promise<ParseResult> {
   const state = useLogStore.getState();
 
-  console.info("[log-source] loading selected file", {
+  // Check cache first — if the file was already parsed (e.g., during folder
+  // batch load), skip the IPC call entirely and apply from cache.
+  const cached = getCachedTabSnapshot(filePath);
+  if (cached) {
+    console.info("[log-source] loadSelectedLogFile from cache (instant)", { filePath });
+
+    state.setEntries(cached.entries);
+    state.setSelectedSourceFilePath(cached.selectedSourceFilePath);
+    state.setOpenFilePath(filePath);
+    state.setFormatDetected(cached.formatDetected);
+    state.setParserSelection(cached.parserSelection);
+    state.setTotalLines(cached.totalLines);
+    state.setByteOffset(cached.byteOffset);
+    state.setSourceOpenMode(cached.sourceOpenMode);
+    state.selectEntry(null);
+    state.setSourceStatus({
+      kind: "loaded",
+      message: `Loaded ${getBaseName(filePath)} from cache.`,
+    });
+
+    // Open/switch to a tab for this file
+    const fileName = filePath.split(/[\\/]/).pop() ?? filePath;
+    useUiStore.getState().openTab(filePath, fileName, buildTabSourceContext(source));
+
+    // Return a synthetic ParseResult to satisfy callers
+    return {
+      entries: cached.entries,
+      formatDetected: cached.formatDetected ?? null,
+      parserSelection: cached.parserSelection ?? null,
+      totalLines: cached.totalLines,
+      parseErrors: 0,
+      filePath,
+      fileSize: 0,
+      byteOffset: cached.byteOffset,
+    } as ParseResult;
+  }
+
+  console.info("[log-source] loading selected file (IPC)", {
     sourceKind: source.kind,
     filePath,
   });
