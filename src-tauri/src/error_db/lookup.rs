@@ -71,11 +71,12 @@ pub fn detect_error_code_spans(message: &str) -> Vec<ErrorCodeSpan> {
             let hex_str = &message[m.start()..m.end()];
             let code_val = u32::from_str_radix(&hex_str[2..], 16).ok()?;
             let ec = find_error_code(code_val)?;
-            // Convert byte offsets to character offsets for JavaScript interop.
-            // JS String.slice() uses char indices, but regex::Match returns byte offsets.
-            let char_start = message[..m.start()].chars().count();
-            // The match is all ASCII hex digits, so byte len == char len
-            let char_end = char_start + (m.end() - m.start());
+            // Convert byte offsets to UTF-16 code unit offsets for JavaScript interop.
+            // JS String.slice() uses UTF-16 indices, but regex::Match returns byte offsets.
+            let utf16_start = message[..m.start()].encode_utf16().count();
+            // The match itself is all ASCII hex digits, so its UTF-16 length equals byte length.
+            let char_start = utf16_start;
+            let char_end = utf16_start + (m.end() - m.start());
             Some(ErrorCodeSpan {
                 start: char_start,
                 end: char_end,
@@ -418,18 +419,33 @@ mod tests {
         );
     }
 
+    /// Helper: simulate JS String.slice(start, end) using UTF-16 code unit offsets.
+    fn js_slice(s: &str, start: usize, end: usize) -> String {
+        let utf16: Vec<u16> = s.encode_utf16().collect();
+        String::from_utf16(&utf16[start..end]).unwrap()
+    }
+
     #[test]
     fn test_detect_spans_with_non_ascii_prefix() {
         // "Ñoño" has multi-byte UTF-8 chars, so byte offsets diverge from char offsets
         let msg = "Ñoño error: 0x80070005 failed";
         let spans = detect_error_code_spans(msg);
         assert_eq!(spans.len(), 1);
-        // Verify char offsets work correctly with JS String.slice() semantics
-        let code_text: String = msg
-            .chars()
-            .skip(spans[0].start)
-            .take(spans[0].end - spans[0].start)
-            .collect();
-        assert_eq!(code_text, "0x80070005");
+        // Verify UTF-16 offsets work correctly with JS String.slice() semantics
+        assert_eq!(js_slice(msg, spans[0].start, spans[0].end), "0x80070005");
+    }
+
+    #[test]
+    fn test_detect_spans_with_emoji_prefix() {
+        // Emoji like 🔥 are non-BMP: 4 bytes in UTF-8, 2 code units in UTF-16,
+        // but only 1 Rust char. This test ensures we count UTF-16 code units,
+        // not Unicode scalar values.
+        let msg = "🔥🔥 error 0x80070005 done";
+        let spans = detect_error_code_spans(msg);
+        assert_eq!(spans.len(), 1);
+        // 🔥 = 2 UTF-16 code units each, so prefix "🔥🔥 error " = 4 + 7 = 11 UTF-16 units
+        assert_eq!(spans[0].start, 11);
+        assert_eq!(spans[0].end, 21);
+        assert_eq!(js_slice(msg, spans[0].start, spans[0].end), "0x80070005");
     }
 }

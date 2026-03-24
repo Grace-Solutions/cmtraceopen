@@ -126,10 +126,27 @@ function renderMessageWithSpans(
       <span
         key={`code-${span.start}`}
         title={`${span.codeHex} — ${span.description} [${span.category}]`}
-        onClick={(e) => {
-          e.stopPropagation();
-          onSpanClick?.(span);
-        }}
+        onClick={
+          onSpanClick
+            ? (e) => {
+                e.stopPropagation();
+                onSpanClick(span);
+              }
+            : undefined
+        }
+        onKeyDown={
+          onSpanClick
+            ? (e) => {
+                if (e.key === "Enter" || e.key === " ") {
+                  e.preventDefault();
+                  e.stopPropagation();
+                  onSpanClick(span);
+                }
+              }
+            : undefined
+        }
+        role={onSpanClick ? "button" : undefined}
+        tabIndex={onSpanClick ? 0 : undefined}
         style={{
           textDecoration: "underline dotted",
           textDecorationColor: isSelected

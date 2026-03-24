@@ -10,7 +10,7 @@ import {
   getLogDetailsLineHeight,
   LOG_MONOSPACE_FONT_FAMILY,
 } from "../../lib/log-accessibility";
-import { getCategoryColor } from "../dialogs/ErrorLookupDialog";
+import { getCategoryColor } from "../../lib/error-categories";
 
 export function InfoPane() {
   const entries = useLogStore((state) => state.entries);

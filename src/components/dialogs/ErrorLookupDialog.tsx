@@ -20,6 +20,7 @@ import {
   type ErrorLookupHistoryEntry,
 } from "../../stores/ui-store";
 import { LOG_MONOSPACE_FONT_FAMILY } from "../../lib/log-accessibility";
+import { getCategoryColor } from "../../lib/error-categories";
 
 interface ErrorSearchResult {
   codeHex: string;
@@ -34,51 +35,13 @@ interface ErrorLookupDialogProps {
   onClose: () => void;
 }
 
-export function getCategoryColor(
-  category: string
-):
-  | "informative"
-  | "warning"
-  | "success"
-  | "important"
-  | "severe"
-  | "danger" {
-  switch (category) {
-    case "Windows":
-      return "informative";
-    case "Windows Update":
-      return "informative";
-    case "BITS":
-      return "informative";
-    case "Intune":
-      return "warning";
-    case "ConfigMgr":
-      return "success";
-    case "App Install":
-      return "important";
-    case "Certificate":
-      return "severe";
-    case "Security":
-      return "danger";
-    case "Network":
-      return "informative";
-    case "Delivery Optimization":
-      return "important";
-    case "Registry":
-      return "informative";
-    case "File System":
-      return "informative";
-    default:
-      return "informative";
-  }
-}
-
 const isCodePattern = (q: string): boolean => {
   const trimmed = q.trim();
   return (
     trimmed.startsWith("0x") ||
     trimmed.startsWith("0X") ||
     /^-\d/.test(trimmed) ||
+    /^\d+$/.test(trimmed) ||
     (trimmed.length >= 6 && /^[0-9A-Fa-f]+$/.test(trimmed))
   );
 };
@@ -228,6 +191,10 @@ export function ErrorLookupDialog({ isOpen, onClose }: ErrorLookupDialogProps) {
               onKeyDown={(e) => {
                 if (e.key === "Enter") {
                   e.preventDefault();
+                  if (debounceRef.current) {
+                    clearTimeout(debounceRef.current);
+                    debounceRef.current = null;
+                  }
                   void doSearch(query);
                 }
               }}
