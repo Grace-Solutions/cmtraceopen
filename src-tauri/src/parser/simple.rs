@@ -124,6 +124,9 @@ pub fn parse_lines(lines: &[&str], file_path: &str) -> (Vec<LogEntry>, u32) {
                     file_path: file_path.to_string(),
                     timezone_offset: Some(parsed.timezone_offset),
                     error_code_spans: Vec::new(),
+                    ip_address: None,
+                    host_name: None,
+                    mac_address: None,
                 });
                 id_counter += 1;
             }
@@ -144,6 +147,9 @@ pub fn parse_lines(lines: &[&str], file_path: &str) -> (Vec<LogEntry>, u32) {
                     file_path: file_path.to_string(),
                     timezone_offset: None,
                     error_code_spans: Vec::new(),
+                    ip_address: None,
+                    host_name: None,
+                    mac_address: None,
                 });
                 id_counter += 1;
                 errors += 1;

@@ -260,6 +260,8 @@ function getParserLabel(parser: ParserSelectionInfo["parser"]): string {
       return "PSADT Legacy";
     case "intuneMacOs":
       return "Intune macOS";
+    case "dhcp":
+      return "DHCP Server";
   }
 }
 
@@ -283,6 +285,8 @@ function getImplementationLabel(
       return "PSADT Legacy parser";
     case "intuneMacOs":
       return "Intune macOS pipe-delimited parser";
+    case "dhcp":
+      return "DHCP Server CSV parser";
   }
 }
 

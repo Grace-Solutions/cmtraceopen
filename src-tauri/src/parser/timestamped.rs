@@ -130,6 +130,9 @@ pub fn parse_lines(lines: &[&str], file_path: &str, date_order: DateOrder) -> (V
                 file_path: file_path.to_string(),
                 timezone_offset: None,
                 error_code_spans: Vec::new(),
+                    ip_address: None,
+                    host_name: None,
+                    mac_address: None,
             });
             parse_errors += 1;
         }
@@ -210,6 +213,9 @@ fn try_iso(line: &str) -> Option<LogEntry> {
         file_path: String::new(),
         timezone_offset: tz_offset,
         error_code_spans: Vec::new(),
+                    ip_address: None,
+                    host_name: None,
+                    mac_address: None,
     })
 }
 
@@ -272,6 +278,9 @@ fn try_slash_date(line: &str, date_order: DateOrder) -> Option<LogEntry> {
         file_path: String::new(),
         timezone_offset: None,
         error_code_spans: Vec::new(),
+                    ip_address: None,
+                    host_name: None,
+                    mac_address: None,
     })
 }
 
@@ -321,6 +330,9 @@ fn try_syslog(line: &str) -> Option<LogEntry> {
         file_path: String::new(),
         timezone_offset: None,
         error_code_spans: Vec::new(),
+                    ip_address: None,
+                    host_name: None,
+                    mac_address: None,
     })
 }
 
@@ -360,6 +372,9 @@ fn try_time_only(line: &str) -> Option<LogEntry> {
         file_path: String::new(),
         timezone_offset: None,
         error_code_spans: Vec::new(),
+                    ip_address: None,
+                    host_name: None,
+                    mac_address: None,
     })
 }
 

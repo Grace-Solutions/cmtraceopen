@@ -13,7 +13,8 @@ export type ParserKind =
   | "reportingEvents"
   | "msi"
   | "psadtLegacy"
-  | "intuneMacOs";
+  | "intuneMacOs"
+  | "dhcp";
 export type ParserImplementation =
   | "ccm"
   | "simple"
@@ -22,7 +23,8 @@ export type ParserImplementation =
   | "plainText"
   | "msi"
   | "psadtLegacy"
-  | "intuneMacOs";
+  | "intuneMacOs"
+  | "dhcp";
 export type ParserProvenance = "dedicated" | "heuristic" | "fallback";
 export type ParseQuality = "structured" | "semiStructured" | "textFallback";
 export type RecordFraming = "physicalLine" | "logicalRecord";
@@ -121,6 +123,9 @@ export interface LogEntry {
   filePath: string;
   timezoneOffset: number | null;
   errorCodeSpans?: ErrorCodeSpan[];
+  ipAddress?: string | null;
+  hostName?: string | null;
+  macAddress?: string | null;
 }
 
 export interface ParserSelectionInfo {

@@ -79,6 +79,9 @@ pub fn parse_ime_entries(content: &str, file_path: &str) -> (Vec<LogEntry>, u32)
             file_path: file_path.to_string(),
             timezone_offset: entry.timezone_offset,
             error_code_spans: Vec::new(),
+                    ip_address: None,
+                    host_name: None,
+                    mac_address: None,
         })
         .collect();
 

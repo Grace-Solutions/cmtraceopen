@@ -9,7 +9,10 @@ export type ColumnId =
   | "component"
   | "thread"
   | "sourceFile"
-  | "filePath";
+  | "filePath"
+  | "ipAddress"
+  | "hostName"
+  | "macAddress";
 
 /** Static definition for a column — label, width, and how to read data from a LogEntry. */
 export interface ColumnDefinition {
@@ -109,6 +112,33 @@ export const ALL_COLUMNS: readonly ColumnDefinition[] = [
     isDetail: true,
     accessor: (e) => e.filePath.split(/[\\/]/).pop() ?? e.filePath,
   },
+  {
+    id: "ipAddress",
+    label: "IP Address",
+    defaultWidth: 140,
+    minWidth: 80,
+    isFlex: false,
+    isDetail: true,
+    accessor: (e) => e.ipAddress ?? null,
+  },
+  {
+    id: "hostName",
+    label: "Host Name",
+    defaultWidth: 200,
+    minWidth: 80,
+    isFlex: false,
+    isDetail: true,
+    accessor: (e) => e.hostName ?? null,
+  },
+  {
+    id: "macAddress",
+    label: "MAC Address",
+    defaultWidth: 150,
+    minWidth: 80,
+    isFlex: false,
+    isDetail: true,
+    accessor: (e) => e.macAddress ?? null,
+  },
 ];
 
 /** Lookup from ColumnId to its definition for O(1) access. */
@@ -133,6 +163,7 @@ const PARSER_COLUMN_MAP: Record<ParserKind, ColumnId[]> = {
   msi: ["severity", "dateTime", "message", "component", "thread"],
   psadtLegacy: ["severity", "dateTime", "message", "component", "sourceFile"],
   intuneMacOs: ["severity", "dateTime", "message", "component", "thread", "sourceFile"],
+  dhcp: ["severity", "dateTime", "message", "ipAddress", "hostName", "macAddress"],
 };
 
 /** Default columns used before any file is loaded. */

@@ -2,6 +2,7 @@ pub mod cbs;
 pub mod panther;
 pub mod ccm;
 pub mod detect;
+pub mod dhcp;
 pub mod dism;
 pub mod intune_macos;
 pub mod msi;
@@ -86,6 +87,9 @@ pub fn parse_lines_with_selection(
         }
         crate::models::log_entry::ParserImplementation::IntuneMacOs => {
             intune_macos::parse_lines(lines, file_path)
+        }
+        crate::models::log_entry::ParserImplementation::Dhcp => {
+            dhcp::parse_lines(lines, file_path)
         }
         crate::models::log_entry::ParserImplementation::GenericTimestamped => match selection.parser {
             crate::models::log_entry::ParserKind::Cbs => cbs::parse_lines(lines, file_path),

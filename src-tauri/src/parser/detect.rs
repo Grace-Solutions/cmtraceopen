@@ -13,7 +13,7 @@
 //! - Otherwise → Plain text
 
 use super::{
-    cbs, dism, intune_macos, msi, panther, psadt, reporting_events,
+    cbs, dhcp, dism, intune_macos, msi, panther, psadt, reporting_events,
     timestamped::{self, DateOrder},
 };
 use crate::models::log_entry::{
@@ -174,6 +174,18 @@ impl ResolvedParser {
         )
     }
 
+    pub fn dhcp() -> Self {
+        Self::new(
+            ParserKind::Dhcp,
+            ParserImplementation::Dhcp,
+            ParserProvenance::Dedicated,
+            ParseQuality::Structured,
+            RecordFraming::PhysicalLine,
+            DateOrder::MonthFirst,
+            None,
+        )
+    }
+
     pub fn intune_macos() -> Self {
         Self::new(
             ParserKind::IntuneMacOs,
@@ -207,6 +219,7 @@ impl ResolvedParser {
             ParserImplementation::Msi => LogFormat::Timestamped,
             ParserImplementation::PsadtLegacy => LogFormat::Timestamped,
             ParserImplementation::IntuneMacOs => LogFormat::Timestamped,
+            ParserImplementation::Dhcp => LogFormat::Timestamped,
             ParserImplementation::PlainText => LogFormat::Plain,
         }
     }
@@ -266,6 +279,10 @@ pub fn detect_parser(path: &str, content: &str) -> ResolvedParser {
         )
     );
 
+    let dhcp_path_hint = path_lower.contains("dhcpsrvlog")
+        || path_lower.contains("dhcpv6srvlog")
+        || path_lower.contains("dhcp_logs");
+
     let intune_macos_path_hint = path_lower.contains("intunemdmdaemon")
         || path_lower.contains("/logs/microsoft/intune/");
 
@@ -278,6 +295,7 @@ pub fn detect_parser(path: &str, content: &str) -> ResolvedParser {
     let mut msi_count = 0u32;
     let mut psadt_legacy_count = 0u32;
     let mut intune_macos_count = 0u32;
+    let mut dhcp_count = 0u32;
     let mut timestamp_count = 0;
     let mut has_day_first = false;
 
@@ -299,6 +317,8 @@ pub fn detect_parser(path: &str, content: &str) -> ResolvedParser {
             timestamp_count += 1;
         } else if panther::matches_panther_record(line.trim()) {
             panther_count += 1;
+        } else if dhcp::matches_dhcp_record(line.trim()) {
+            dhcp_count += 1;
         } else if intune_macos::matches_intune_macos(line.trim()) {
             intune_macos_count += 1;
             timestamp_count += 1;
@@ -335,6 +355,8 @@ pub fn detect_parser(path: &str, content: &str) -> ResolvedParser {
         ResolvedParser::reporting_events()
     } else if dism_count >= 2 {
         ResolvedParser::dism()
+    } else if (dhcp_path_hint && dhcp_count >= 1) || dhcp_count >= 3 {
+        ResolvedParser::dhcp()
     } else if (intune_macos_path_hint && intune_macos_count >= 1) || intune_macos_count >= 2 {
         ResolvedParser::intune_macos()
     } else if msi_count >= 2 {
