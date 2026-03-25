@@ -13,6 +13,7 @@ use std::path::Path;
 use crate::error_db::lookup::lookup_error_code;
 use crate::models::log_entry::{LogEntry, ParserKind, Severity};
 use crate::parser;
+use crate::parser::burn;
 
 // ── Types ────────────────────────────────────────────────────────────────
 
@@ -130,6 +131,21 @@ fn classify_format(
                 DeploymentFormat::PatchMyPc
             } else {
                 DeploymentFormat::PsadtWrapper
+            }
+        }
+        // Burn logs may be detected as Timestamped or Plain when the first 20
+        // lines don't contain enough `[hex:hex][ISO-date]` records. Fall back
+        // to a content scan of the raw entry messages.
+        ParserKind::Timestamped | ParserKind::Plain => {
+            let burn_matches = entries
+                .iter()
+                .take(50)
+                .filter(|e| burn::matches_burn_record(e.message.trim()))
+                .count();
+            if burn_matches >= 2 {
+                DeploymentFormat::Burn
+            } else {
+                DeploymentFormat::Unknown
             }
         }
         _ => DeploymentFormat::Unknown,
@@ -510,6 +526,42 @@ mod tests {
     fn test_format_burn_direct() {
         let entries = vec![make_entry("test", Severity::Info)];
         assert!(matches!(classify_format(ParserKind::Burn, &entries, "test.log"), DeploymentFormat::Burn));
+    }
+
+    #[test]
+    fn test_format_burn_fallback_from_timestamped() {
+        let entries = vec![
+            make_entry("[07A4:0CBC][2025-11-25T01:55:42]i001: Burn v3.14.1.8722, Windows v10.0", Severity::Info),
+            make_entry("[07A4:0CBC][2025-11-25T01:55:43]i000: Initializing", Severity::Info),
+        ];
+        assert!(matches!(
+            classify_format(ParserKind::Timestamped, &entries, "setup.exe.log"),
+            DeploymentFormat::Burn
+        ));
+    }
+
+    #[test]
+    fn test_format_burn_fallback_from_plain() {
+        let entries = vec![
+            make_entry("[1234:5678][2025-11-25T01:55:42]i001: Started bootstrapper", Severity::Info),
+            make_entry("[1234:5678][2025-11-25T01:55:43]e000: Error occurred", Severity::Error),
+        ];
+        assert!(matches!(
+            classify_format(ParserKind::Plain, &entries, "installer.exe.log"),
+            DeploymentFormat::Burn
+        ));
+    }
+
+    #[test]
+    fn test_format_plain_stays_unknown() {
+        let entries = vec![
+            make_entry("Just some plain text", Severity::Info),
+            make_entry("No burn patterns here", Severity::Info),
+        ];
+        assert!(matches!(
+            classify_format(ParserKind::Plain, &entries, "random.log"),
+            DeploymentFormat::Unknown
+        ));
     }
 
     #[test]
