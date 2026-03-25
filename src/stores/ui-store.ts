@@ -121,6 +121,7 @@ interface UiState {
   showFileAssociationPrompt: boolean;
   logListFontSize: number;
   logDetailsFontSize: number;
+  fontFamily: string | null;
   themeId: ThemeId;
   columnWidths: Record<string, number>;
   columnOrder: ColumnId[] | null;
@@ -155,6 +156,8 @@ interface UiState {
   resetLogListFontSize: () => void;
   setLogDetailsFontSize: (fontSize: number) => void;
   resetLogDetailsFontSize: () => void;
+  setFontFamily: (family: string | null) => void;
+  resetFontFamily: () => void;
   setThemeId: (id: ThemeId) => void;
   resetLogAccessibilityPreferences: () => void;
   setFocusedErrorCode: (
@@ -199,6 +202,12 @@ const sanitizePersistedUiState = (
     sanitized.logDetailsFontSize = clampLogDetailsFontSize(base);
   }
 
+  if (sanitized.fontFamily !== undefined && sanitized.fontFamily !== null) {
+    if (typeof sanitized.fontFamily !== "string") {
+      sanitized.fontFamily = null;
+    }
+  }
+
   if (sanitized.themeId !== undefined) {
     const validThemeIds: ThemeId[] = [
       "light", "dark", "high-contrast", "classic-cmtrace",
@@ -230,6 +239,7 @@ export const useUiStore = create<UiState>()(
       showFileAssociationPrompt: false,
       logListFontSize: DEFAULT_LOG_LIST_FONT_SIZE,
       logDetailsFontSize: DEFAULT_LOG_DETAILS_FONT_SIZE,
+      fontFamily: null,
       themeId: DEFAULT_THEME_ID,
       columnWidths: {},
       columnOrder: null,
@@ -305,11 +315,14 @@ export const useUiStore = create<UiState>()(
         set({ logDetailsFontSize: clampLogDetailsFontSize(fontSize) }),
       resetLogDetailsFontSize: () =>
         set({ logDetailsFontSize: DEFAULT_LOG_DETAILS_FONT_SIZE }),
+      setFontFamily: (family) => set({ fontFamily: family }),
+      resetFontFamily: () => set({ fontFamily: null }),
       setThemeId: (id) => set({ themeId: id }),
       resetLogAccessibilityPreferences: () =>
         set({
           logListFontSize: DEFAULT_LOG_LIST_FONT_SIZE,
           logDetailsFontSize: DEFAULT_LOG_DETAILS_FONT_SIZE,
+          fontFamily: null,
           themeId: DEFAULT_THEME_ID,
         }),
       setFocusedErrorCode: (code) => set({ focusedErrorCode: code }),
@@ -437,6 +450,7 @@ export const useUiStore = create<UiState>()(
       partialize: (state) => ({
         logListFontSize: state.logListFontSize,
         logDetailsFontSize: state.logDetailsFontSize,
+        fontFamily: state.fontFamily,
         themeId: state.themeId,
         columnWidths: state.columnWidths,
         columnOrder: state.columnOrder,
