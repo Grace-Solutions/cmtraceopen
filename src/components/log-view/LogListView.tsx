@@ -424,7 +424,8 @@ function HeaderCell({
             right: 0,
             top: 0,
             bottom: 0,
-            width: 5,
+            width: 12,
+            marginRight: -6,
             cursor: "col-resize",
             backgroundColor: resizeHover
               ? tokens.colorBrandStroke1
