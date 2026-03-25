@@ -413,7 +413,7 @@ function HeaderCell({
     >
       {col.label}
 
-      {/* Resize handle — not on flex (message) column */}
+      {/* Resize handle in upper-right corner — not on flex (message) column */}
       {!col.isFlex && (
         <div
           onMouseDown={(e) => onResizeStart(col.id, e)}
@@ -421,18 +421,30 @@ function HeaderCell({
           onMouseLeave={() => setResizeHover(false)}
           style={{
             position: "absolute",
-            right: 0,
+            right: -2,
             top: 0,
-            bottom: 0,
-            width: 12,
-            marginRight: -6,
+            width: 10,
+            height: "100%",
             cursor: "col-resize",
-            backgroundColor: resizeHover
-              ? tokens.colorBrandStroke1
-              : "transparent",
             zIndex: 1,
+            display: "flex",
+            alignItems: "flex-start",
+            justifyContent: "center",
+            paddingTop: 2,
           }}
-        />
+        >
+          {/* Visual grip indicator */}
+          <div
+            style={{
+              width: 4,
+              height: 10,
+              borderRadius: 1,
+              backgroundColor: resizeHover
+                ? tokens.colorBrandStroke1
+                : tokens.colorNeutralStroke2,
+            }}
+          />
+        </div>
       )}
     </div>
   );
