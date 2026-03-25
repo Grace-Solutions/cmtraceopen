@@ -161,16 +161,7 @@ export function LogListView() {
       e.preventDefault();
       e.stopPropagation();
       const def = getColumnDef(colId);
-      // For flex columns without an override, measure the rendered width from the DOM
-      let currentWidth = columnWidths[colId];
-      if (currentWidth == null) {
-        if (def?.isFlex) {
-          const cell = (e.currentTarget as HTMLElement).parentElement;
-          currentWidth = cell?.offsetWidth ?? 400;
-        } else {
-          currentWidth = def?.defaultWidth ?? 100;
-        }
-      }
+      const currentWidth = columnWidths[colId] ?? def?.defaultWidth ?? 100;
       resizeRef.current = { colId, startX: e.clientX, startWidth: currentWidth };
     },
     [columnWidths]

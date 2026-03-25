@@ -70,9 +70,9 @@ export const ALL_COLUMNS: readonly ColumnDefinition[] = [
   {
     id: "message",
     label: "Log Text",
-    defaultWidth: -1,
+    defaultWidth: 600,
     minWidth: 100,
-    isFlex: true,
+    isFlex: false,
     isDetail: false,
     accessor: (e) => e.message,
   },
@@ -240,10 +240,8 @@ export function buildGridTemplateColumns(
 ): string {
   return columns
     .map((c) => {
-      const override = widthOverrides?.[c.id];
-      if (override != null) return `${override}px`;
-      if (c.isFlex) return "minmax(0, 1fr)";
-      return `${c.defaultWidth}px`;
+      const w = widthOverrides?.[c.id] ?? c.defaultWidth;
+      return `${w}px`;
     })
     .join(" ");
 }
