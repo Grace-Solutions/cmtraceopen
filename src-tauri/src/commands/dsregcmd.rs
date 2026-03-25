@@ -63,8 +63,11 @@ pub fn analyze_dsregcmd(
         result.proxy_evidence = registry::load_proxy_evidence(bp);
         result.enrollment_evidence = registry::load_enrollment_evidence(bp);
         result.active_evidence = load_active_evidence_from_bundle(bp);
+        result.scheduled_task_evidence = load_scheduled_task_evidence_from_bundle(bp);
         result.event_log_analysis = load_event_log_from_bundle(bp);
     }
+
+    apply_enrollment_cross_reference(&mut result);
 
     // Run extended diagnostics (Phase 2, 3, 4) after all evidence is loaded
     let mut extended = rules::build_extended_diagnostics(&result);
@@ -120,6 +123,43 @@ fn load_event_log_from_bundle(
     std::fs::read_to_string(&path)
         .ok()
         .and_then(|json| serde_json::from_str(&json).ok())
+}
+
+fn load_scheduled_task_evidence_from_bundle(
+    bundle_path: &Path,
+) -> Option<crate::dsregcmd::DsregcmdScheduledTaskEvidence> {
+    let path = bundle_path
+        .join("evidence")
+        .join("scheduled-tasks")
+        .join("enterprise-mgmt-tasks.json");
+    std::fs::read_to_string(&path)
+        .ok()
+        .and_then(|json| serde_json::from_str(&json).ok())
+}
+
+/// Cross-reference enrollment registry entries with scheduled task GUIDs
+/// to upgrade `mdm_enrolled` when dsregcmd output lacks MDM URLs.
+fn apply_enrollment_cross_reference(result: &mut DsregcmdAnalysisResult) {
+    if result.derived.mdm_enrolled.is_some() {
+        return;
+    }
+    if let (Some(enrollment), Some(tasks)) = (
+        &result.enrollment_evidence,
+        &result.scheduled_task_evidence,
+    ) {
+        let confirmed = enrollment.enrollments.iter().any(|e| {
+            e.enrollment_state == Some(1)
+                && e.guid.as_ref().is_some_and(|g| {
+                    tasks
+                        .enterprise_mgmt_guids
+                        .iter()
+                        .any(|t| t.eq_ignore_ascii_case(g))
+                })
+        });
+        if confirmed {
+            result.derived.mdm_enrolled = Some(true);
+        }
+    }
 }
 
 #[tauri::command]
@@ -384,6 +424,18 @@ fn stage_live_capture_bundle(stdout: &str) -> Result<LiveCaptureBundle, String> 
         }
     }
 
+    // Phase 5: Scheduled task evidence (EnterpriseMgmt GUIDs)
+    let scheduled_task_evidence = collect_enterprise_mgmt_task_guids();
+    let evidence_scheduled_tasks = bundle_path.join("evidence").join("scheduled-tasks");
+    if fs::create_dir_all(&evidence_scheduled_tasks).is_ok() {
+        if let Ok(json) = serde_json::to_string_pretty(&scheduled_task_evidence) {
+            let _ = fs::write(
+                evidence_scheduled_tasks.join("enterprise-mgmt-tasks.json"),
+                json,
+            );
+        }
+    }
+
     Ok(LiveCaptureBundle {
         bundle_path,
         evidence_file_path,
@@ -538,6 +590,73 @@ fn export_live_registry_evidence(registry_root: &Path) {
             }
         }
     }
+}
+
+#[cfg(target_os = "windows")]
+fn collect_enterprise_mgmt_task_guids() -> crate::dsregcmd::DsregcmdScheduledTaskEvidence {
+    use regex::Regex;
+
+    let mut evidence = crate::dsregcmd::DsregcmdScheduledTaskEvidence::default();
+
+    let schtasks_path = match resolve_system32_binary("schtasks.exe") {
+        Ok(p) => p,
+        Err(e) => {
+            eprintln!("event=dsregcmd_schtasks_skipped reason={e}");
+            return evidence;
+        }
+    };
+
+    let output = match std::process::Command::new(&schtasks_path)
+        .args([
+            "/query",
+            "/TN",
+            r"\Microsoft\Windows\EnterpriseMgmt",
+            "/FO",
+            "LIST",
+        ])
+        .output()
+    {
+        Ok(o) => o,
+        Err(e) => {
+            eprintln!("event=dsregcmd_schtasks_failed error={e}");
+            return evidence;
+        }
+    };
+
+    if !output.status.success() {
+        let stderr = String::from_utf8_lossy(&output.stderr).trim().to_string();
+        eprintln!(
+            "event=dsregcmd_schtasks_failed exit_code={} stderr={}",
+            output.status.code().unwrap_or_default(),
+            stderr
+        );
+        return evidence;
+    }
+
+    let stdout = String::from_utf8_lossy(&output.stdout);
+    let guid_re = Regex::new(r"\{[0-9A-Fa-f]{8}-[0-9A-Fa-f]{4}-[0-9A-Fa-f]{4}-[0-9A-Fa-f]{4}-[0-9A-Fa-f]{12}\}")
+        .expect("valid GUID regex");
+
+    let mut seen = std::collections::HashSet::new();
+    for line in stdout.lines() {
+        let trimmed = line.trim();
+        if !trimmed.starts_with("TaskName:") {
+            continue;
+        }
+        for cap in guid_re.find_iter(trimmed) {
+            let guid = cap.as_str().to_string();
+            if seen.insert(guid.to_ascii_uppercase()) {
+                evidence.enterprise_mgmt_guids.push(guid);
+            }
+        }
+    }
+
+    eprintln!(
+        "event=dsregcmd_schtasks_complete guid_count={}",
+        evidence.enterprise_mgmt_guids.len()
+    );
+
+    evidence
 }
 
 #[cfg(target_os = "windows")]

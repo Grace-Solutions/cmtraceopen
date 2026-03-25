@@ -1211,18 +1211,69 @@ function getFactGroups(
                       ? ("warn" as const)
                       : ("good" as const),
               },
-              ...result.enrollmentEvidence.enrollments.map((e, i) => ({
-                label: `Enrollment ${i + 1}`,
-                value: [
-                  e.upn ?? "(no UPN)",
-                  e.providerId ?? "(no provider)",
-                  e.enrollmentState != null
-                    ? `state=${e.enrollmentState}`
-                    : "",
-                ]
-                  .filter(Boolean)
-                  .join(" — "),
-              })),
+              ...result.enrollmentEvidence.enrollments.map((e, i) => {
+                const hasTaskMatch =
+                  e.guid != null &&
+                  result.scheduledTaskEvidence?.enterpriseMgmtGuids?.some(
+                    (t) => t.toLowerCase() === e.guid!.toLowerCase(),
+                  );
+                return {
+                  label: `Enrollment ${i + 1}`,
+                  value: [
+                    e.guid ?? "(no GUID)",
+                    e.upn ?? "(no UPN)",
+                    e.providerId ?? "(no provider)",
+                    e.enrollmentState != null
+                      ? `state=${e.enrollmentState}`
+                      : "",
+                    hasTaskMatch ? "task-matched" : "",
+                  ]
+                    .filter(Boolean)
+                    .join(" — "),
+                  tone:
+                    e.enrollmentState === 1 && hasTaskMatch
+                      ? ("good" as const)
+                      : undefined,
+                };
+              }),
+            ]),
+          },
+        ]
+      : []),
+    ...(result.scheduledTaskEvidence?.enterpriseMgmtGuids?.length
+      ? [
+          {
+            id: "enterprise-mgmt-tasks",
+            title: "Enterprise Management Tasks",
+            caption:
+              "Scheduled task GUIDs under \\Microsoft\\Windows\\EnterpriseMgmt, cross-referenced with enrollment registry entries.",
+            rows: withNotReportedMetadata([
+              {
+                label: "Task GUID Count",
+                value: String(
+                  result.scheduledTaskEvidence.enterpriseMgmtGuids.length,
+                ),
+              },
+              ...result.scheduledTaskEvidence.enterpriseMgmtGuids.map(
+                (guid) => {
+                  const matchingEnrollment =
+                    result.enrollmentEvidence?.enrollments.find(
+                      (e) =>
+                        e.guid?.toLowerCase() === guid.toLowerCase(),
+                    );
+                  const enrolled =
+                    matchingEnrollment?.enrollmentState === 1;
+                  return {
+                    label: guid,
+                    value: matchingEnrollment
+                      ? `Registry match — ${matchingEnrollment.upn ?? "(no UPN)"} — state=${matchingEnrollment.enrollmentState}`
+                      : "No matching enrollment registry entry",
+                    tone: enrolled
+                      ? ("good" as const)
+                      : ("neutral" as const),
+                  };
+                },
+              ),
             ]),
           },
         ]

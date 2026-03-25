@@ -35,6 +35,7 @@ pub fn analyze_facts(facts: DsregcmdFacts, raw_input: &str) -> DsregcmdAnalysisR
         proxy_evidence: None,
         enrollment_evidence: None,
         active_evidence: None,
+        scheduled_task_evidence: None,
         event_log_analysis: None,
     }
 }
@@ -1657,6 +1658,48 @@ pub fn build_extended_diagnostics(
         }
     }
 
+    // MDM confirmed via registry cross-reference (no dsregcmd MDM URLs)
+    let mdm_urls_absent = result.facts.management_details.mdm_url.is_none()
+        && result.facts.management_details.mdm_compliance_url.is_none();
+    if result.derived.mdm_enrolled == Some(true) && mdm_urls_absent {
+        let mut evidence_lines = Vec::new();
+        if let Some(ref enrollment) = result.enrollment_evidence {
+            for entry in &enrollment.enrollments {
+                if entry.enrollment_state == Some(1) {
+                    let guid_display = entry.guid.as_deref().unwrap_or("(unknown)");
+                    let upn_display = entry.upn.as_deref().unwrap_or("(no UPN)");
+                    evidence_lines.push(format!(
+                        "GUID: {} — UPN: {} — EnrollmentState: 1",
+                        guid_display, upn_display
+                    ));
+                }
+            }
+        }
+        if let Some(ref tasks) = result.scheduled_task_evidence {
+            evidence_lines.push(format!(
+                "EnterpriseMgmt scheduled task GUIDs: {}",
+                if tasks.enterprise_mgmt_guids.is_empty() {
+                    "(none)".to_string()
+                } else {
+                    tasks.enterprise_mgmt_guids.join(", ")
+                }
+            ));
+        }
+        diagnostics.push(issue(
+            "mdm-confirmed-via-registry",
+            IntuneDiagnosticSeverity::Info,
+            "configuration",
+            "MDM enrollment confirmed via scheduled tasks and registry",
+            "The dsregcmd output does not contain MDM URLs, but the device has active enrollment entries in the registry whose GUIDs match scheduled tasks under \\Microsoft\\Windows\\EnterpriseMgmt. This confirms the device is MDM-enrolled.",
+            evidence_lines,
+            vec![
+                "The dsregcmd MDM URL fields are tenant-dependent and often absent on enrolled devices.".to_string(),
+                "The registry cross-reference with scheduled tasks provides a definitive enrollment signal.".to_string(),
+            ],
+            Vec::new(),
+        ));
+    }
+
     diagnostics
 }
 
@@ -2847,5 +2890,106 @@ mod tests {
         let ids: Vec<&str> = analysis.diagnostics.iter().map(|i| i.id.as_str()).collect();
 
         assert!(!ids.contains(&"scp-tenant-mismatch-hint"), "should not fire without tenant ID");
+    }
+
+    #[test]
+    fn mdm_confirmed_via_registry_diagnostic_fires_when_cross_referenced() {
+        use crate::dsregcmd::models::{
+            DsregcmdEnrollmentEntry, DsregcmdEnrollmentEvidence,
+            DsregcmdScheduledTaskEvidence,
+        };
+        use super::build_extended_diagnostics;
+
+        let facts = parse_dsregcmd(NOT_JOINED_SAMPLE).expect("parse sample");
+        let mut result = analyze_facts(facts, NOT_JOINED_SAMPLE);
+
+        // Simulate enrollment evidence with state=1 and matching task GUID
+        result.enrollment_evidence = Some(DsregcmdEnrollmentEvidence {
+            enrollment_count: 1,
+            enrollments: vec![DsregcmdEnrollmentEntry {
+                guid: Some("{AAAAAAAA-BBBB-CCCC-DDDD-EEEEEEEEEEEE}".to_string()),
+                upn: Some("user@contoso.com".to_string()),
+                provider_id: Some("MS DM Server".to_string()),
+                enrollment_state: Some(1),
+            }],
+        });
+        result.scheduled_task_evidence = Some(DsregcmdScheduledTaskEvidence {
+            enterprise_mgmt_guids: vec![
+                "{AAAAAAAA-BBBB-CCCC-DDDD-EEEEEEEEEEEE}".to_string(),
+            ],
+        });
+
+        // Simulate the cross-reference upgrading mdm_enrolled
+        assert_eq!(result.derived.mdm_enrolled, None);
+        // Apply same logic as command handler
+        if result.derived.mdm_enrolled.is_none() {
+            if let (Some(enrollment), Some(tasks)) = (
+                &result.enrollment_evidence,
+                &result.scheduled_task_evidence,
+            ) {
+                let confirmed = enrollment.enrollments.iter().any(|e| {
+                    e.enrollment_state == Some(1)
+                        && e.guid.as_ref().is_some_and(|g| {
+                            tasks.enterprise_mgmt_guids.iter().any(|t| t.eq_ignore_ascii_case(g))
+                        })
+                });
+                if confirmed {
+                    result.derived.mdm_enrolled = Some(true);
+                }
+            }
+        }
+        assert_eq!(result.derived.mdm_enrolled, Some(true));
+
+        let extended = build_extended_diagnostics(&result);
+        assert!(
+            extended.iter().any(|d| d.id == "mdm-confirmed-via-registry"),
+            "should fire mdm-confirmed-via-registry diagnostic"
+        );
+    }
+
+    #[test]
+    fn mdm_not_confirmed_without_matching_scheduled_task() {
+        use crate::dsregcmd::models::{
+            DsregcmdEnrollmentEntry, DsregcmdEnrollmentEvidence,
+            DsregcmdScheduledTaskEvidence,
+        };
+
+        let facts = parse_dsregcmd(NOT_JOINED_SAMPLE).expect("parse sample");
+        let mut result = analyze_facts(facts, NOT_JOINED_SAMPLE);
+
+        // Enrollment state=1 but GUID doesn't match any scheduled task
+        result.enrollment_evidence = Some(DsregcmdEnrollmentEvidence {
+            enrollment_count: 1,
+            enrollments: vec![DsregcmdEnrollmentEntry {
+                guid: Some("{AAAAAAAA-BBBB-CCCC-DDDD-EEEEEEEEEEEE}".to_string()),
+                upn: Some("user@contoso.com".to_string()),
+                provider_id: Some("MS DM Server".to_string()),
+                enrollment_state: Some(1),
+            }],
+        });
+        result.scheduled_task_evidence = Some(DsregcmdScheduledTaskEvidence {
+            enterprise_mgmt_guids: vec![
+                "{99999999-8888-7777-6666-555555555555}".to_string(),
+            ],
+        });
+
+        // Cross-reference should NOT upgrade because GUIDs don't match
+        if result.derived.mdm_enrolled.is_none() {
+            if let (Some(enrollment), Some(tasks)) = (
+                &result.enrollment_evidence,
+                &result.scheduled_task_evidence,
+            ) {
+                let confirmed = enrollment.enrollments.iter().any(|e| {
+                    e.enrollment_state == Some(1)
+                        && e.guid.as_ref().is_some_and(|g| {
+                            tasks.enterprise_mgmt_guids.iter().any(|t| t.eq_ignore_ascii_case(g))
+                        })
+                });
+                if confirmed {
+                    result.derived.mdm_enrolled = Some(true);
+                }
+            }
+        }
+        assert_eq!(result.derived.mdm_enrolled, None, "should stay None when GUIDs don't match");
     }
 }
