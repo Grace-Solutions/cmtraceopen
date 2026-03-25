@@ -76,6 +76,7 @@ pub fn run() {
             commands::macos_diag::macos_get_package_files,
             commands::macos_diag::macos_query_unified_log,
             commands::macos_diag::macos_open_system_settings,
+            commands::fonts::list_system_fonts,
         ])
         .run(tauri::generate_context!())
         .expect("error while running tauri application");
