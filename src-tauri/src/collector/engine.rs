@@ -116,7 +116,7 @@ pub fn run_collection<R: Runtime>(
     let duration_ms = start.elapsed().as_millis() as u64;
 
     // Write manifest and notes.
-    manifest::write_manifest(&bundle_root, &profile, &all_results, &counts, duration_ms)?;
+    manifest::write_manifest(&bundle_root, &bundle_id, &profile, &all_results, &counts, duration_ms)?;
     manifest::write_notes(&bundle_root, &profile, &counts, duration_ms)?;
 
     // Final progress event.
@@ -179,7 +179,7 @@ fn compute_counts(results: &[ArtifactResult]) -> ArtifactCounts {
         collected,
         missing,
         failed,
-        total: collected + missing + failed,
+        total: results.len() as u32,
     }
 }
 

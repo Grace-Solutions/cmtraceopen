@@ -28,7 +28,15 @@ async fn collect_diagnostics_impl(
         crate::collector::engine::run_collection(request_id, output_root, app)
     })
     .await
-    .map_err(|e| format!("collection task panicked: {e}"))?
+    .map_err(|e| {
+        if e.is_panic() {
+            format!("collection task panicked: {e}")
+        } else if e.is_cancelled() {
+            "collection task was cancelled".to_string()
+        } else {
+            format!("collection task failed to join: {e}")
+        }
+    })?
 }
 
 #[cfg(not(target_os = "windows"))]

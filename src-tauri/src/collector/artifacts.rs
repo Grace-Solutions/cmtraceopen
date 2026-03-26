@@ -31,10 +31,13 @@ pub fn collect_logs(items: &[LogCollectionItem], ctx: &CollectorContext) {
             Ok(paths) => paths,
             Err(_) => {
                 push_result(ctx, &item.id, "logs", ArtifactStatus::Failed, None, Some(format!("invalid glob pattern: {pattern}")));
+                ctx.completed.fetch_add(1, Ordering::Relaxed);
                 return;
             }
         };
 
+        let mut copied = 0usize;
+        let mut failed = 0usize;
         let mut any_match = false;
         for entry in entries.flatten() {
             if entry.is_file() {
@@ -42,19 +45,18 @@ pub fn collect_logs(items: &[LogCollectionItem], ctx: &CollectorContext) {
                 let file_name = entry.file_name().unwrap_or_default();
                 let dest_path = dest_dir.join(file_name);
                 match fs::copy(&entry, &dest_path) {
-                    Ok(bytes) => {
-                        push_result(ctx, &item.id, "logs", ArtifactStatus::Collected, Some(dest_path.to_string_lossy().into_owned()), None);
-                        let _ = bytes;
-                    }
-                    Err(e) => {
-                        push_result(ctx, &item.id, "logs", ArtifactStatus::Failed, None, Some(format!("copy failed: {e}")));
-                    }
+                    Ok(_) => copied += 1,
+                    Err(_) => failed += 1,
                 }
             }
         }
 
         if !any_match {
             push_result(ctx, &item.id, "logs", ArtifactStatus::Missing, None, Some(format!("no files matched: {pattern}")));
+        } else if failed == 0 {
+            push_result(ctx, &item.id, "logs", ArtifactStatus::Collected, Some(dest_dir.to_string_lossy().into_owned()), Some(format!("{copied} file(s) copied")));
+        } else {
+            push_result(ctx, &item.id, "logs", ArtifactStatus::Failed, Some(dest_dir.to_string_lossy().into_owned()), Some(format!("{copied} copied, {failed} failed")));
         }
 
         ctx.completed.fetch_add(1, Ordering::Relaxed);
@@ -120,10 +122,13 @@ pub fn copy_event_logs(items: &[EventLogCollectionItem], ctx: &CollectorContext)
             Ok(paths) => paths,
             Err(_) => {
                 push_result(ctx, &item.id, "event-logs", ArtifactStatus::Failed, None, Some(format!("invalid glob pattern: {pattern}")));
+                ctx.completed.fetch_add(1, Ordering::Relaxed);
                 return;
             }
         };
 
+        let mut copied = 0usize;
+        let mut failed = 0usize;
         let mut any_match = false;
         for entry in entries.flatten() {
             if entry.is_file() {
@@ -131,19 +136,18 @@ pub fn copy_event_logs(items: &[EventLogCollectionItem], ctx: &CollectorContext)
                 let file_name = entry.file_name().unwrap_or_default();
                 let dest_path = dest_dir.join(file_name);
                 match fs::copy(&entry, &dest_path) {
-                    Ok(_) => {
-                        push_result(ctx, &item.id, "event-logs", ArtifactStatus::Collected, Some(dest_path.to_string_lossy().into_owned()), None);
-                    }
-                    Err(e) => {
-                        // Event logs may be locked by the OS. This is expected for some channels.
-                        push_result(ctx, &item.id, "event-logs", ArtifactStatus::Failed, None, Some(format!("copy failed (may be locked): {e}")));
-                    }
+                    Ok(_) => copied += 1,
+                    Err(_) => failed += 1,
                 }
             }
         }
 
         if !any_match {
             push_result(ctx, &item.id, "event-logs", ArtifactStatus::Missing, None, Some(format!("no files matched: {pattern}")));
+        } else if failed == 0 {
+            push_result(ctx, &item.id, "event-logs", ArtifactStatus::Collected, Some(dest_dir.to_string_lossy().into_owned()), Some(format!("{copied} file(s) copied")));
+        } else {
+            push_result(ctx, &item.id, "event-logs", ArtifactStatus::Failed, Some(dest_dir.to_string_lossy().into_owned()), Some(format!("{copied} copied, {failed} failed (may be locked by OS)")));
         }
 
         ctx.completed.fetch_add(1, Ordering::Relaxed);
@@ -170,6 +174,8 @@ pub fn copy_exports(items: &[FileExportItem], ctx: &CollectorContext) {
                     return;
                 }
             };
+            let mut copied = 0usize;
+            let mut failed = 0usize;
             let mut any_match = false;
             for entry in entries.flatten() {
                 if entry.is_file() {
@@ -177,13 +183,17 @@ pub fn copy_exports(items: &[FileExportItem], ctx: &CollectorContext) {
                     let file_name = entry.file_name().unwrap_or_default();
                     let dest_path = dest_dir.join(file_name);
                     match fs::copy(&entry, &dest_path) {
-                        Ok(_) => push_result(ctx, &item.id, "exports", ArtifactStatus::Collected, Some(dest_path.to_string_lossy().into_owned()), None),
-                        Err(e) => push_result(ctx, &item.id, "exports", ArtifactStatus::Failed, None, Some(format!("copy failed: {e}"))),
+                        Ok(_) => copied += 1,
+                        Err(_) => failed += 1,
                     }
                 }
             }
             if !any_match {
                 push_result(ctx, &item.id, "exports", ArtifactStatus::Missing, None, Some(format!("no files matched: {source}")));
+            } else if failed == 0 {
+                push_result(ctx, &item.id, "exports", ArtifactStatus::Collected, Some(dest_dir.to_string_lossy().into_owned()), Some(format!("{copied} file(s) copied")));
+            } else {
+                push_result(ctx, &item.id, "exports", ArtifactStatus::Failed, Some(dest_dir.to_string_lossy().into_owned()), Some(format!("{copied} copied, {failed} failed")));
             }
         } else {
             let source_path = Path::new(&source);
@@ -242,12 +252,10 @@ pub fn run_commands(items: &[CommandCollectionItem], ctx: &CollectorContext) {
                 Ok(child) => {
                     match child.wait_with_output() {
                         Ok(output) => {
-                            // Check if we exceeded a reasonable timeout approximation.
-                            // Note: std::process doesn't have native timeout, so we rely
-                            // on the command finishing. For a true timeout we'd need tokio
-                            // or a wait loop, but wait_with_output is sufficient for most
-                            // diagnostic commands which complete quickly.
-                            let _ = timeout; // acknowledged — used for future enhancement
+                            // Note: std::process doesn't have native timeout. For a true
+                            // timeout we'd need tokio or a wait loop. wait_with_output is
+                            // sufficient for most diagnostic commands which complete quickly.
+                            let _ = timeout;
 
                             let stdout = String::from_utf8_lossy(&output.stdout);
                             let stderr = String::from_utf8_lossy(&output.stderr);

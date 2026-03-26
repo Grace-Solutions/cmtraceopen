@@ -10,6 +10,7 @@ use crate::collector::types::{ArtifactCounts, ArtifactResult, ArtifactStatus, Co
 /// `inspect_evidence_bundle` logic in `file_ops.rs`.
 pub fn write_manifest(
     bundle_root: &Path,
+    bundle_id: &str,
     profile: &CollectionProfile,
     results: &[ArtifactResult],
     counts: &ArtifactCounts,
@@ -32,21 +33,46 @@ pub fn write_manifest(
         .collect();
 
     let manifest = json!({
-        "manifestVersion": 1,
-        "manifestPath": "manifest.json",
-        "source": "cmtrace-open-collector",
-        "profileName": profile.profile_name,
-        "profileVersion": profile.profile_version,
-        "collectedAt": now.to_rfc3339(),
-        "hostname": hostname,
-        "durationMs": duration_ms,
-        "artifacts": {
-            "collected": counts.collected,
-            "missing": counts.missing,
-            "failed": counts.failed,
-            "total": counts.total,
+        "bundle": {
+            "bundleId": bundle_id,
+            "bundleLabel": "cmtrace-diagnostics",
+            "createdUtc": now.to_rfc3339(),
+            "summary": format!(
+                "Diagnostics collected by CMTrace Open in {:.1}s",
+                duration_ms as f64 / 1000.0
+            ),
+            "device": {
+                "deviceName": hostname,
+                "platform": "Windows",
+            },
         },
-        "gaps": gaps,
+        "collection": {
+            "collectorProfile": profile.profile_name,
+            "collectorVersion": profile.profile_version,
+            "collectedUtc": now.to_rfc3339(),
+            "durationMs": duration_ms,
+            "results": {
+                "artifactCounts": {
+                    "collected": counts.collected,
+                    "missing": counts.missing,
+                    "failed": counts.failed,
+                    "skipped": 0,
+                },
+                "gaps": gaps,
+            },
+        },
+        "artifacts": [],
+        "intakeHints": {
+            "notesPath": "notes.md",
+            "evidenceRoot": "evidence",
+            "primaryEntryPoints": [
+                "evidence/logs",
+                "evidence/registry",
+                "evidence/event-logs",
+                "evidence/exports",
+                "evidence/command-output",
+            ],
+        },
     });
 
     let manifest_path = bundle_root.join("manifest.json");
@@ -69,33 +95,34 @@ pub fn write_notes(
     let hostname = hostname();
 
     let notes = format!(
-        "# Evidence Collection Notes\n\
-         \n\
-         - **Collected by:** CMTrace Open (Rust collector)\n\
-         - **Profile:** {} v{}\n\
-         - **Device:** {}\n\
-         - **Timestamp:** {}\n\
-         - **Duration:** {:.1}s\n\
-         \n\
-         ## Summary\n\
-         \n\
-         | Metric | Count |\n\
-         |--------|-------|\n\
-         | Collected | {} |\n\
-         | Missing | {} |\n\
-         | Failed | {} |\n\
-         | **Total** | **{}** |\n\
-         \n\
-         ## Structure\n\
-         \n\
-         ```\n\
-         evidence/\n\
-         ├── logs/           Log files (IME, Panther, CBS, MSI, etc.)\n\
-         ├── registry/       Registry exports (.reg)\n\
-         ├── event-logs/     Event log copies (.evtx)\n\
-         ├── exports/        Configuration files and diagnostic outputs\n\
-         └── command-output/  Command stdout captures\n\
-         ```\n",
+"# Evidence Collection Notes
+
+- **Collected by:** CMTrace Open (Rust collector)
+- **Profile:** {} v{}
+- **Device:** {}
+- **Timestamp:** {}
+- **Duration:** {:.1}s
+
+## Summary
+
+| Metric | Count |
+|--------|-------|
+| Collected | {} |
+| Missing | {} |
+| Failed | {} |
+| **Total** | **{}** |
+
+## Structure
+
+```
+evidence/
+├── logs/           Log files (IME, Panther, CBS, MSI, etc.)
+├── registry/       Registry exports (.reg)
+├── event-logs/     Event log copies (.evtx)
+├── exports/        Configuration files and diagnostic outputs
+└── command-output/ Command stdout captures
+```
+",
         profile.profile_name,
         profile.profile_version,
         hostname,
