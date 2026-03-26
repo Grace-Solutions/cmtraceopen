@@ -716,4 +716,39 @@ mod tests {
         assert_eq!(strip_short_guid_suffix("Some Name (not-hex...)"), None);
         assert_eq!(strip_short_guid_suffix("Some Name (not a guid)"), None);
     }
+
+    #[test]
+    fn to_serializable_preserves_entries_and_sources() {
+        let mut reg = GuidRegistry::new();
+        reg.ingest_lines(&[
+            line(r#"Processing app: {"AppId":"aaaa1111-2222-3333-4444-555566667777","ApplicationName":"Contoso App"}"#),
+            line(r#"Download started: {"AppId":"bbbb1111-2222-3333-4444-555566667777","SetUpFilePath":"C:\\Cache\\installer.exe"}"#),
+        ]);
+
+        let map = reg.to_serializable();
+        assert_eq!(map.len(), 2);
+
+        let contoso = &map["aaaa1111-2222-3333-4444-555566667777"];
+        assert_eq!(contoso.name, "Contoso App");
+        assert_eq!(contoso.source, GuidNameSource::ApplicationName);
+
+        let installer = &map["bbbb1111-2222-3333-4444-555566667777"];
+        assert_eq!(installer.name, "installer.exe");
+        assert_eq!(installer.source, GuidNameSource::SetUpFilePath);
+
+        // Verify JSON serialization contract
+        let json = serde_json::to_value(&map).expect("serialize registry map");
+        assert_eq!(
+            json["aaaa1111-2222-3333-4444-555566667777"]["name"].as_str(),
+            Some("Contoso App")
+        );
+        assert_eq!(
+            json["aaaa1111-2222-3333-4444-555566667777"]["source"].as_str(),
+            Some("ApplicationName")
+        );
+        assert_eq!(
+            json["bbbb1111-2222-3333-4444-555566667777"]["source"].as_str(),
+            Some("SetUpFilePath")
+        );
+    }
 }
