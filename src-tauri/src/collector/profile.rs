@@ -17,6 +17,15 @@ impl CollectionProfile {
             + self.exports.len()
             + self.commands.len()
     }
+
+    /// Filter all collection items to only those whose `family` is in the provided list.
+    pub fn filter_by_families(&mut self, families: &[String]) {
+        self.logs.retain(|item| families.contains(&item.family));
+        self.registry.retain(|item| families.contains(&item.family));
+        self.event_logs.retain(|item| families.contains(&item.family));
+        self.exports.retain(|item| families.contains(&item.family));
+        self.commands.retain(|item| families.contains(&item.family));
+    }
 }
 
 #[cfg(test)]
@@ -44,5 +53,34 @@ mod tests {
             + profile.commands.len();
         assert_eq!(profile.total_items(), expected);
         assert!(expected > 100, "full profile should have 100+ items");
+    }
+
+    #[test]
+    fn filter_by_families_retains_only_matching() {
+        let mut profile = CollectionProfile::embedded();
+        let original_total = profile.total_items();
+
+        profile.filter_by_families(&["general".to_string(), "networking".to_string()]);
+
+        assert!(profile.total_items() > 0, "should have some items for general+networking");
+        assert!(profile.total_items() < original_total, "should be fewer items than full profile");
+
+        // Verify every remaining item belongs to an allowed family.
+        for item in &profile.logs {
+            assert!(item.family == "general" || item.family == "networking", "unexpected log family: {}", item.family);
+        }
+        for item in &profile.registry {
+            assert!(item.family == "general" || item.family == "networking", "unexpected registry family: {}", item.family);
+        }
+        for item in &profile.commands {
+            assert!(item.family == "general" || item.family == "networking", "unexpected command family: {}", item.family);
+        }
+    }
+
+    #[test]
+    fn filter_by_families_empty_list_yields_empty_profile() {
+        let mut profile = CollectionProfile::embedded();
+        profile.filter_by_families(&[]);
+        assert_eq!(profile.total_items(), 0);
     }
 }
