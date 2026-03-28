@@ -4,7 +4,6 @@ A free, open-source log viewer and Windows troubleshooting tool. Drop in a log f
 
 Built as a modern replacement for Microsoft's CMTrace.exe with added Intune diagnostics, DSRegCmd analysis, and real-time log tailing.
 
-![Main Window](references/main_window_wlog.png)
 
 ## Install
 
@@ -38,8 +37,6 @@ All releases are signed. The Windows executable is code-signed and the macOS app
 
 Analyze Intune Management Extension logs without reading raw text line by line.
 
-![Intune Diagnostics](references/intune_diag.png)
-
 - Parse a single IME log or an entire `IntuneManagementExtension\Logs` folder
 - Color-coded event timeline for Win32 apps, WinGet apps, PowerShell scripts, remediations, ESP, and sync sessions
 - Download statistics with size, speed, and Delivery Optimization percentage
@@ -50,8 +47,6 @@ Analyze Intune Management Extension logs without reading raw text line by line.
 ### DSRegCmd Troubleshooting Workspace
 
 Triage Entra join, hybrid join, PRT, MDM, and Windows Hello for Business issues.
-
-![DSRegCmd Workspace](references/dsregcmd1.png)
 
 - Live capture, paste, text file, or evidence bundle input
 - Join posture, failure stage, and capture confidence at a glance
