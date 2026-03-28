@@ -25,6 +25,7 @@ First stable release. Since v0.5.0, CMTrace Open has received a complete UX over
 - **WiX/Burn bootstrapper**: Handles `[PID:TID][ISO-timestamp]sNNN:` format logs (vc_redist, .NET runtime, etc.).
 - **MSI verbose log**: Handles ~12 distinct line patterns — engine messages, action start/end, property dumps, and `MainEngineThread` return values. Embeds MSI exit code descriptions (1000–3002).
 - **PSADT Legacy**: Parses `[timestamp] [section] [source] [severity] :: message` logs from PSAppDeployToolkit v4. Embeds PSADT exit codes (60001–60012).
+- **Windows Registry export (.reg)**: Dedicated parser and viewer for `.reg` files exported by `regedit.exe`. Auto-detected via the `Windows Registry Editor Version 5.00` header. Supports REG_SZ, REG_DWORD, REG_QWORD, REG_BINARY, REG_EXPAND_SZ, REG_MULTI_SZ, REG_NONE, and delete markers. Hex line continuations and UTF-16LE encoded values are decoded automatically. Opens in a regedit-style two-pane viewer with a virtualized key tree (handles 22 MB+ files) and a value table showing Name, Type, and Data columns. Integrates into the tab system alongside log files. The file open dialog now includes a "Registry Files (*.reg)" filter.
 
 #### Parser enrichment
 
