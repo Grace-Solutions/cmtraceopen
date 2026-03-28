@@ -17,6 +17,7 @@ pub const MENU_ID_EDIT_FILTER: &str = "edit.filter";
 
 pub const MENU_ID_TOOLS_ERROR_LOOKUP: &str = "tools.error_lookup";
 pub const MENU_ID_TOOLS_BUNDLE_SUMMARY: &str = "tools.bundle_summary";
+pub const MENU_ID_TOOLS_COLLECT_DIAGNOSTICS: &str = "tools.collect_diagnostics";
 
 pub const MENU_ID_WINDOW_TOGGLE_DETAILS: &str = "window.toggle.details";
 pub const MENU_ID_WINDOW_TOGGLE_INFO: &str = "window.toggle.info";
@@ -71,6 +72,14 @@ pub fn build_app_menu<R: Runtime>(app: &AppHandle<R>) -> tauri::Result<Menu<R>> 
         true,
         None::<&str>,
     )?;
+    #[cfg(target_os = "windows")]
+    let collect_diagnostics = MenuItem::with_id(
+        app,
+        MENU_ID_TOOLS_COLLECT_DIAGNOSTICS,
+        "Collect Diagnostics...",
+        true,
+        None::<&str>,
+    )?;
 
     let toggle_details = MenuItem::with_id(
         app,
@@ -102,6 +111,9 @@ pub fn build_app_menu<R: Runtime>(app: &AppHandle<R>) -> tauri::Result<Menu<R>> 
         &[&open_log_file, &open_log_folder, &known_sources, &quit],
     )?;
     let edit_menu = Submenu::with_items(app, "Edit", true, &[&find, &filter])?;
+    #[cfg(target_os = "windows")]
+    let tools_menu = Submenu::with_items(app, "Tools", true, &[&error_lookup, &bundle_summary, &collect_diagnostics])?;
+    #[cfg(not(target_os = "windows"))]
     let tools_menu = Submenu::with_items(app, "Tools", true, &[&error_lookup, &bundle_summary])?;
     let window_menu = Submenu::with_items(
         app,
@@ -351,6 +363,14 @@ fn payload_for_menu_id(menu_id: &str) -> Option<AppMenuActionPayload> {
             version: 1,
             menu_id: MENU_ID_TOOLS_BUNDLE_SUMMARY.to_string(),
             action: "show_evidence_bundle".to_string(),
+            category: "tools".to_string(),
+            trigger: "menu".to_string(),
+            source_id: None,
+        },
+        MENU_ID_TOOLS_COLLECT_DIAGNOSTICS => AppMenuActionPayload {
+            version: 1,
+            menu_id: MENU_ID_TOOLS_COLLECT_DIAGNOSTICS.to_string(),
+            action: "collect_diagnostics".to_string(),
             category: "tools".to_string(),
             trigger: "menu".to_string(),
             source_id: None,

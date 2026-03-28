@@ -14,6 +14,8 @@ import { AboutDialog } from "../dialogs/AboutDialog";
 import { AccessibilityDialog } from "../dialogs/AccessibilityDialog";
 import { EvidenceBundleDialog } from "../dialogs/EvidenceBundleDialog";
 import { FileAssociationPromptDialog } from "../dialogs/FileAssociationPromptDialog";
+import { CollectDiagnosticsDialog } from "../dialogs/CollectDiagnosticsDialog";
+import { CollectionCompleteDialog } from "../dialogs/CollectionCompleteDialog";
 import { IntuneDashboard } from "../intune/IntuneDashboard";
 import { NewIntuneWorkspace } from "../intune/NewIntuneWorkspace";
 import { DsregcmdWorkspace } from "../dsregcmd/DsregcmdWorkspace";
@@ -31,6 +33,7 @@ import { useKeyboard } from "../../hooks/use-keyboard";
 import { useDragDrop } from "../../hooks/use-drag-drop";
 import { useFileAssociation } from "../../hooks/use-file-association";
 import { useFileAssociationPrompt } from "../../hooks/use-file-association-prompt";
+import { useCollectionProgressListener } from "../../hooks/use-collection-progress-listener";
 
 function buildFilterRunSignature(entries: LogEntry[], clauses: FilterClause[]): string {
   const lastId = entries.length > 0 ? entries[entries.length - 1].id : -1;
@@ -78,6 +81,13 @@ export function AppShell() {
   );
 
   const activeTabIndex = useUiStore((s) => s.activeTabIndex);
+  const collectionProgress = useUiStore((s) => s.collectionProgress);
+  const collectionResult = useUiStore((s) => s.collectionResult);
+  const setCollectionResult = useUiStore((s) => s.setCollectionResult);
+  const showCollectDiagnosticsDialog = useUiStore((s) => s.showCollectDiagnosticsDialog);
+  const setShowCollectDiagnosticsDialog = useUiStore((s) => s.setShowCollectDiagnosticsDialog);
+
+  useCollectionProgressListener();
 
   const entries = useLogStore((s) => s.entries);
   const filterClauses = useFilterStore((s) => s.clauses);
@@ -409,6 +419,40 @@ export function AppShell() {
 
       <StatusBar />
 
+      {collectionProgress && collectionProgress.completedItems < collectionProgress.totalItems && (
+        <div
+          style={{
+            display: "flex",
+            alignItems: "center",
+            gap: "10px",
+            padding: "6px 16px",
+            backgroundColor: tokens.colorNeutralBackground3,
+            borderTop: `1px solid ${tokens.colorNeutralStroke2}`,
+            fontSize: "12px",
+            color: tokens.colorNeutralForeground2,
+          }}
+        >
+          <Spinner size="tiny" />
+          <span>Collecting diagnostics…</span>
+          <div style={{ flex: 1, height: "4px", backgroundColor: tokens.colorNeutralBackground5, borderRadius: "2px", overflow: "hidden" }}>
+            <div
+              style={{
+                width: collectionProgress.totalItems > 0
+                  ? `${(collectionProgress.completedItems / collectionProgress.totalItems) * 100}%`
+                  : "0%",
+                height: "100%",
+                backgroundColor: tokens.colorBrandBackground,
+                borderRadius: "2px",
+                transition: "width 0.3s ease",
+              }}
+            />
+          </div>
+          <span style={{ color: tokens.colorNeutralForeground3, whiteSpace: "nowrap" }}>
+            {collectionProgress.completedItems} / {collectionProgress.totalItems}
+          </span>
+        </div>
+      )}
+
       <FilterDialog
         isOpen={showFilterDialog}
         onClose={() => setShowFilterDialog(false)}
@@ -434,6 +478,14 @@ export function AppShell() {
       <FileAssociationPromptDialog
         isOpen={showFileAssociationPrompt}
         onClose={() => setShowFileAssociationPrompt(false)}
+      />
+      <CollectDiagnosticsDialog
+        isOpen={showCollectDiagnosticsDialog}
+        onClose={() => setShowCollectDiagnosticsDialog(false)}
+      />
+      <CollectionCompleteDialog
+        result={collectionResult}
+        onClose={() => setCollectionResult(null)}
       />
     </div>
   );

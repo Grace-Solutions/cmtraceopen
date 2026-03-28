@@ -518,6 +518,7 @@ dependencies = [
  "encoding_rs",
  "evtx",
  "font-kit",
+ "glob",
  "log",
  "notify",
  "once_cell",
