@@ -1,6 +1,7 @@
 import { useEffect } from "react";
 import { listen } from "@tauri-apps/api/event";
 import { useAppActions } from "../components/layout/Toolbar";
+import { useUiStore } from "../stores/ui-store";
 
 const MENU_EVENT_APP_ACTION = "app-menu-action";
 
@@ -77,6 +78,9 @@ export function useAppMenu() {
             return;
           case "show_accessibility_settings":
             showAccessibilityDialog();
+            return;
+          case "collect_diagnostics":
+            useUiStore.getState().setShowCollectDiagnosticsDialog(true);
             return;
           case "open_known_source": {
             if (payload.source_id) {
