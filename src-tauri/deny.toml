@@ -1,8 +1,5 @@
 [advisories]
 vulnerability = "deny"
-unmaintained = "warn"
-yanked = "warn"
-notice = "warn"
 
 [licenses]
 unlicensed = "deny"
@@ -19,7 +16,6 @@ allow = [
     "OpenSSL",
     "CC0-1.0",
 ]
-copyleft = "warn"
 
 [bans]
 multiple-versions = "warn"
