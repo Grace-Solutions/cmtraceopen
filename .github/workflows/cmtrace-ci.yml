@@ -142,6 +142,15 @@ jobs:
       - name: Install frontend dependencies
         run: npm ci
 
+      - name: Disable updater signing for CI builds
+        run: |
+          node -e "
+            const fs = require('fs');
+            const conf = JSON.parse(fs.readFileSync('src-tauri/tauri.conf.json', 'utf8'));
+            if (conf.bundle) conf.bundle.createUpdaterArtifacts = false;
+            fs.writeFileSync('src-tauri/tauri.conf.json', JSON.stringify(conf, null, 2));
+          "
+
       - name: Build Tauri app
         uses: tauri-apps/tauri-action@v0
         env:
