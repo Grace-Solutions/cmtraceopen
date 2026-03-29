@@ -2,8 +2,8 @@
 mod windows_impl {
     use std::collections::HashMap;
     use std::ffi::c_void;
+    use std::sync::OnceLock;
 
-    use once_cell::sync::Lazy;
     use regex::Regex;
     use windows::core::{Error, HSTRING, PCWSTR};
     use windows::Win32::System::EventLog::{
@@ -12,10 +12,13 @@ mod windows_impl {
         EvtRender, EvtRenderEventXml,
     };
 
-    static PROVIDER_RE: Lazy<Regex> = Lazy::new(|| {
-        Regex::new(r#"<Provider[^>]*Name=['\"]([^'\"]+)['\"]"#)
-            .expect("provider regex must compile")
-    });
+    fn provider_re() -> &'static Regex {
+        static CELL: OnceLock<Regex> = OnceLock::new();
+        CELL.get_or_init(|| {
+            Regex::new(r#"<Provider[^>]*Name=['\"]([^'\"]+)['\"]"#)
+                .expect("provider regex must compile")
+        })
+    }
 
     #[derive(Debug, Clone)]
     pub struct LiveEventRecord {
@@ -212,7 +215,7 @@ mod windows_impl {
     }
 
     fn extract_provider_name(xml: &str) -> Option<String> {
-        PROVIDER_RE
+        provider_re()
             .captures(xml)
             .and_then(|captures| captures.get(1).map(|value| value.as_str().to_string()))
     }
