@@ -573,7 +573,7 @@ fn inspect_evidence_artifact_preview(
                     path: normalize_path_string(path),
                     intake_kind,
                     summary:
-                        "Registry snapshot preview requires a full CMTrace Open build."
+                        "Registry snapshot preview is not available in lite builds. Use a full build with the dsregcmd feature enabled."
                             .to_string(),
                     registry_snapshot: None,
                     event_log_export: None,
@@ -1040,7 +1040,9 @@ mod tests {
         #[cfg(not(feature = "dsregcmd"))]
         {
             assert!(registry_preview.registry_snapshot.is_none());
-            assert!(registry_preview.summary.contains("full CMTrace Open build"));
+            assert!(registry_preview
+                .summary
+                .contains("not available in lite builds"));
         }
         assert!(event_preview.event_log_export.is_some());
         assert_eq!(
