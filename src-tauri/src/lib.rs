@@ -107,7 +107,6 @@ pub fn run() {
             commands::macos_diag::macos_query_unified_log,
             #[cfg(feature = "macos-diag")]
             commands::macos_diag::macos_open_system_settings,
-            commands::fonts::list_system_fonts,
             #[cfg(feature = "collector")]
             commands::collector::collect_diagnostics,
         ])

@@ -61,3 +61,4 @@ plist = "1"
 [[bench]]
 name = "intune_pipeline"
 harness = false
+required-features = ["intune-diagnostics"]

@@ -968,7 +968,7 @@ export function Toolbar() {
         Info
       </Button>
 
-      {availableWorkspaces.length > 1 && (
+      {enabledWorkspaces !== null && availableWorkspaces.length > 1 && (
         <>
           <Divider vertical />
 
