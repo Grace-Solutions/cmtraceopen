@@ -158,7 +158,7 @@ pub fn parse_lines(lines: &[&str], file_path: &str) -> (Vec<LogEntry>, u32) {
         }
 
         let values: Vec<&str> = trimmed.split_whitespace().collect();
-        if values.len() != fields.len() {
+        if values.len() < fields.len() {
             entries.push(malformed_entry(id, (i + 1) as u32, trimmed, file_path));
             parse_errors += 1;
             id += 1;
@@ -188,7 +188,7 @@ pub fn parse_lines(lines: &[&str], file_path: &str) -> (Vec<LogEntry>, u32) {
         let server_ip =
             normalize_field(value_for("s-ip").unwrap_or_default()).map(ToString::to_string);
         let user_agent = normalize_field(value_for("cs(User-Agent)").unwrap_or_default())
-            .map(ToString::to_string);
+            .map(|v| v.replace('+', " "));
         let server_port = parse_optional_u16(value_for("s-port"));
         let username =
             normalize_field(value_for("cs-username").unwrap_or_default()).map(ToString::to_string);
