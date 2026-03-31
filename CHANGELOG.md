@@ -4,6 +4,16 @@ All notable changes to this project will be documented in this file.
 
 ## [Unreleased]
 
+### Added
+
+- **IIS W3C log parser** (PR #69): Dedicated parser for IIS W3C Extended log format (`C:\inetpub\logs\LogFiles\W3SVC*`). Auto-detects from the `#Software: Microsoft Internet Information Services` header and dynamically maps fields from the `#Fields:` directive. Surfaces structured columns: Method, URI, Status, Client IP, Server IP, Time (ms), and User Agent. Derives row severity from HTTP status class (4xx → warning, 5xx → error). Added IIS Logs to Windows known sources.
+- **Intune column sorting** (PR #73): Clickable column header sorting on the Download Stats table (Content, Size, Speed, DO %, Duration, Timestamp) and a sort dropdown with direction toggle on the Event Timeline (Time, Name, Type, Status, Duration). Backend pre-computes epoch timestamps for instant client-side sorting. Null values always sort last regardless of direction. Sort state resets on new analysis.
+- **Lite build variant** (PR #68): Feature-gated build that keeps the core log viewer, parser stack, tailing, filtering, and error lookup while compiling out diagnostic workspaces (Intune, DSRegCmd, Deployment, Collector, macOS diagnostics) and their heavier dependencies. Built with `--no-default-features`. Frontend dynamically hides unavailable workspaces via a `get_available_workspaces` backend command. Separate `tauri.lite.conf.json` produces a "CMTrace Open Lite" branded app.
+
+### Changed
+
+- **Release signing** (PR #68): Windows codesign workflow now signs application binaries *before* bundling into NSIS and MSI installers, ensuring the installed EXE carries a valid signature. Previously only the outer installer packages were signed, causing ASR rules to block the extracted unsigned binary. MSI built via Master Packager Dev with integrated Azure Trusted Signing.
+
 ## [1.0.2] - 2026-03-29
 
 ### Added
