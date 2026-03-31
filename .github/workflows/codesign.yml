@@ -196,19 +196,59 @@ jobs:
       - name: Install frontend dependencies
         run: npm ci
 
-      # ── Build full edition (NSIS for auto-updater + standalone EXE) ──
-      - name: Build full edition (NSIS + standalone EXE)
+      # ── Build application binaries (compile only, no bundling yet) ──
+      - name: Build full edition EXE (compile only)
+        run: npx tauri build --target ${{ matrix.rust_target }} --no-bundle
+
+      - name: Build lite edition EXE (compile only)
+        run: npx tauri build --target ${{ matrix.rust_target }} --no-bundle --config src-tauri/tauri.lite.conf.json -- --no-default-features
+
+      # ── Sign application binaries BEFORE bundling ──
+      # This ensures the EXEs inside NSIS and MSI installers are signed,
+      # not just the outer installer packages. Fixes issue #74 where
+      # ASR rules block unsigned binaries after installation.
+      - name: Collect app binaries for code signing
+        id: collect_binaries
+        shell: pwsh
+        run: |
+          $releaseDir = Join-Path $PWD "src-tauri\target\${{ matrix.rust_target }}\release"
+          $signDir = Join-Path $PWD "sign-prebundle"
+          New-Item -ItemType Directory -Force -Path $signDir | Out-Null
+          Copy-Item (Join-Path $releaseDir "CMTrace Open.exe") $signDir -Force
+          Copy-Item (Join-Path $releaseDir "CMTrace Open Lite.exe") $signDir -Force
+          "sign_dir=$signDir" | Out-File -FilePath $env:GITHUB_OUTPUT -Encoding utf8 -Append
+
+      - name: Sign application binaries
+        uses: azure/trusted-signing-action@v0
+        with:
+          azure-tenant-id: ${{ secrets.AZURE_TENANT_ID }}
+          azure-client-id: ${{ secrets.AZURE_CLIENT_ID }}
+          azure-client-secret: ${{ secrets.AZURE_CLIENT_SECRET }}
+          endpoint: ${{ secrets.SIGNING_ENDPOINT }}
+          trusted-signing-account-name: ${{ secrets.SIGNING_ACCOUNT_NAME }}
+          certificate-profile-name: ${{ secrets.SIGNING_PROFILE_NAME }}
+          files-folder: ${{ steps.collect_binaries.outputs.sign_dir }}
+          files-folder-filter: exe
+          file-digest: SHA256
+          timestamp-rfc3161: http://timestamp.acs.microsoft.com
+          timestamp-digest: SHA256
+
+      - name: Replace binaries with signed versions
+        shell: pwsh
+        run: |
+          $releaseDir = Join-Path $PWD "src-tauri\target\${{ matrix.rust_target }}\release"
+          $signDir = "${{ steps.collect_binaries.outputs.sign_dir }}"
+          Copy-Item (Join-Path $signDir "CMTrace Open.exe") $releaseDir -Force
+          Copy-Item (Join-Path $signDir "CMTrace Open Lite.exe") $releaseDir -Force
+
+      # ── Build NSIS installer (bundles the already-signed binary) ──
+      - name: Build NSIS installer
         env:
           TAURI_SIGNING_PRIVATE_KEY: ${{ secrets.TAURI_SIGNING_PRIVATE_KEY }}
           TAURI_SIGNING_PRIVATE_KEY_PASSWORD: ${{ secrets.TAURI_SIGNING_PRIVATE_KEY_PASSWORD }}
-        run: npm run app:build:release -- --target ${{ matrix.rust_target }} --bundles nsis
+        run: npx tauri build --target ${{ matrix.rust_target }} --bundles nsis
 
-      # ── Build lite edition (standalone EXE only) ──
-      - name: Build lite edition (standalone EXE)
-        run: |
-          npx tauri build --target ${{ matrix.rust_target }} --no-bundle --config src-tauri/tauri.lite.conf.json -- --no-default-features
-
-      # ── Stage artifacts ──
+      # ── Stage all release artifacts ──
       - name: Stage release artifacts
         id: stage_artifacts
         shell: pwsh
@@ -219,10 +259,9 @@ jobs:
 
           New-Item -ItemType Directory -Force -Path $artifactDir | Out-Null
 
-          # Find the full edition EXE (CMTrace Open.exe or similar)
+          # Find the full edition EXE
           $fullExeCandidates = Get-ChildItem -Path $releaseDir -Filter "CMTrace Open.exe" -File
           if ($fullExeCandidates.Count -eq 0) {
-            # Fallback: find any non-setup/updater exe
             $fullExeCandidates = Get-ChildItem -Path $releaseDir -Filter *.exe -File |
               Where-Object {
                 $_.DirectoryName -eq $releaseDir -and
@@ -246,7 +285,7 @@ jobs:
             throw "Could not find lite edition EXE in $releaseDir"
           }
 
-          # Find NSIS setup installer for auto-updater
+          # Find NSIS setup installer
           $nsisCandidates = Get-ChildItem -Path $bundleNsisDir -Filter *-setup.exe -File -Recurse
           if ($nsisCandidates.Count -ne 1) {
             $names = ($nsisCandidates | ForEach-Object { $_.FullName }) -join ", "
@@ -262,13 +301,12 @@ jobs:
           Copy-Item $liteExeCandidates[0].FullName $stagedLiteExe -Force
           Copy-Item $nsisCandidates[0].FullName $stagedNsis -Force
 
-          # Export paths for downstream steps
           "full_exe_path=$stagedFullExe" | Out-File -FilePath $env:GITHUB_OUTPUT -Encoding utf8 -Append
           "lite_exe_path=$stagedLiteExe" | Out-File -FilePath $env:GITHUB_OUTPUT -Encoding utf8 -Append
           "nsis_path=$stagedNsis" | Out-File -FilePath $env:GITHUB_OUTPUT -Encoding utf8 -Append
 
-      # ── Sign standalone EXEs (before mpdev so MSI contains signed binaries) ──
-      - name: Sign standalone EXEs
+      # ── Sign NSIS outer installer ──
+      - name: Sign NSIS installer
         uses: azure/trusted-signing-action@v0
         with:
           azure-tenant-id: ${{ secrets.AZURE_TENANT_ID }}
@@ -283,7 +321,7 @@ jobs:
           timestamp-rfc3161: http://timestamp.acs.microsoft.com
           timestamp-digest: SHA256
 
-      # ── Build MSI via Master Packager Dev (bundles both full + lite) ──
+      # ── Build MSI via Master Packager Dev (bundles signed full + lite EXEs) ──
       - name: Install Master Packager Dev
         shell: pwsh
         run: |
