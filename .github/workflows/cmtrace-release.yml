@@ -108,6 +108,6 @@ jobs:
             | Windows (x64 / arm64) | signed `.msi` / signed `.exe` |
             | macOS (ARM) | signed + notarized `.dmg` disk image |
             | Linux (x64) | `.deb` / `.AppImage` |
-          releaseDraft: false
+          releaseDraft: true
           prerelease: false
           args: --target ${{ matrix.target }}

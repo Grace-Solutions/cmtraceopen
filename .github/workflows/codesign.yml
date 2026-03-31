@@ -147,7 +147,7 @@ jobs:
           }
 
           if (-not $releaseExists) {
-            gh release create $env:TAG_NAME --title $releaseTitle --notes $releaseNotes *> $null
+            gh release create $env:TAG_NAME --draft --title $releaseTitle --notes $releaseNotes *> $null
             if ($LASTEXITCODE -ne 0) {
               gh release view $env:TAG_NAME *> $null
               if ($LASTEXITCODE -ne 0) {
