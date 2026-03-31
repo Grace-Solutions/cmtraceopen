@@ -9,6 +9,7 @@ import type {
   IntuneSummary,
   IntuneTimeWindowPreset,
 } from "../../types/intune";
+import type { IntuneSortField } from "../../stores/intune-store";
 import { selectStyle, getFileName } from "./intune-dashboard-utils";
 
 type TabId = "timeline" | "downloads" | "summary";
@@ -44,6 +45,10 @@ export function IntuneDashboardNavBar({
   const filterStatus = useIntuneStore((s) => s.filterStatus);
   const setFilterEventType = useIntuneStore((s) => s.setFilterEventType);
   const setFilterStatus = useIntuneStore((s) => s.setFilterStatus);
+  const sortField = useIntuneStore((s) => s.sortField);
+  const sortDirection = useIntuneStore((s) => s.sortDirection);
+  const setSortField = useIntuneStore((s) => s.setSortField);
+  const toggleSortDirection = useIntuneStore((s) => s.toggleSortDirection);
 
   const availableTabs = useMemo(
     () => ({
@@ -214,6 +219,38 @@ export function IntuneDashboardNavBar({
           <span style={{ fontSize: "11px", color: tokens.colorNeutralForeground3, fontWeight: 500, marginLeft: "4px" }}>
             {filteredEventCount}/{filteredEventsByTime.length}
           </span>
+          <div style={{ width: "1px", height: "16px", backgroundColor: tokens.colorNeutralStroke2, margin: "0 2px" }} />
+          <span style={{ fontSize: "10px", color: tokens.colorNeutralForeground3, fontWeight: 600, textTransform: "uppercase" }}>Sort:</span>
+          <select
+            value={sortField}
+            onChange={(e) => setSortField(e.target.value as IntuneSortField)}
+            style={selectStyle}
+            disabled={isAnalyzing}
+          >
+            <option value="time">Time</option>
+            <option value="name">Name</option>
+            <option value="type">Type</option>
+            <option value="status">Status</option>
+            <option value="duration">Duration</option>
+          </select>
+          <button
+            type="button"
+            onClick={toggleSortDirection}
+            disabled={isAnalyzing}
+            title={sortDirection === "asc" ? "Ascending" : "Descending"}
+            style={{
+              fontSize: "12px",
+              padding: "2px 6px",
+              border: `1px solid ${tokens.colorNeutralStroke2}`,
+              borderRadius: "3px",
+              backgroundColor: tokens.colorNeutralCardBackground,
+              color: tokens.colorNeutralForeground1,
+              cursor: isAnalyzing ? "not-allowed" : "pointer",
+              lineHeight: 1,
+            }}
+          >
+            {sortDirection === "asc" ? "▲" : "▼"}
+          </button>
           {timelineScope.filePath && (
             <>
               <div style={{ width: "1px", height: "16px", backgroundColor: tokens.colorNeutralStroke2, margin: "0 2px" }} />

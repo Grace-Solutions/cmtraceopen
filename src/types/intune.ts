@@ -33,6 +33,8 @@ export interface IntuneEvent {
   detail: string;
   sourceFile: string;
   lineNumber: number;
+  startTimeEpoch: number | null;
+  endTimeEpoch: number | null;
 }
 
 export interface DownloadStat {
@@ -44,7 +46,18 @@ export interface DownloadStat {
   durationSecs: number;
   success: boolean;
   timestamp: string | null;
+  timestampEpoch: number | null;
 }
+
+/** Canonical ordering of Intune status values (lower = more severe). */
+export const STATUS_RANK: Record<string, number> = {
+  Failed: 0,
+  Timeout: 1,
+  InProgress: 2,
+  Pending: 3,
+  Success: 4,
+  Unknown: 5,
+};
 
 export interface IntuneTimestampBounds {
   firstTimestamp: string | null;
