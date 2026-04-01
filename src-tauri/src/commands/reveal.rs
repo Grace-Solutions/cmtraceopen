@@ -14,9 +14,9 @@ pub async fn reveal_in_file_manager(path: String) -> Result<(), String> {
     {
         // On Windows, use explorer /select to highlight the file
         if path.is_file() {
+            let path_str = path.to_string_lossy();
             std::process::Command::new("explorer")
-                .arg("/select,")
-                .arg(path)
+                .arg(format!("/select,{}", path_str))
                 .spawn()
                 .map_err(|e| format!("Failed to open Explorer: {}", e))?;
         } else {
