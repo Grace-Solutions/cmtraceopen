@@ -1,3 +1,4 @@
+pub mod app_config;
 pub mod bundle_ops;
 #[cfg(feature = "collector")]
 pub mod collector;
@@ -16,7 +17,6 @@ pub mod intune;
 pub mod intune_bundle;
 #[cfg(feature = "intune-diagnostics")]
 pub mod intune_diagnostics;
-pub mod app_config;
 pub mod known_sources;
 #[cfg(feature = "macos-diag")]
 pub mod macos_diag;

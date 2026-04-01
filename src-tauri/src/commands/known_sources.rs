@@ -566,9 +566,7 @@ fn macos_known_log_sources() -> Vec<KnownSourceMetadata> {
             Some(KnownSourceDefaultFileIntent {
                 selection_behavior:
                     KnownSourceDefaultFileSelectionBehavior::PreferFileNameThenPattern,
-                preferred_file_names: vec![
-                    "IntuneMDMDaemon.log".to_string(),
-                ],
+                preferred_file_names: vec!["IntuneMDMDaemon.log".to_string()],
             }),
         ),
         // --- macOS Intune: User-level MDM agent logs ---
@@ -626,9 +624,7 @@ fn macos_known_log_sources() -> Vec<KnownSourceMetadata> {
             Some(KnownSourceDefaultFileIntent {
                 selection_behavior:
                     KnownSourceDefaultFileSelectionBehavior::PreferFileNameThenPattern,
-                preferred_file_names: vec![
-                    "CompanyPortal.log".to_string(),
-                ],
+                preferred_file_names: vec!["CompanyPortal.log".to_string()],
             }),
         ),
         // --- macOS install.log ---
