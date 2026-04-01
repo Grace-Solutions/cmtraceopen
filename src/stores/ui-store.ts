@@ -8,7 +8,8 @@ import {
 } from "../lib/log-accessibility";
 import type { ThemeId } from "../lib/themes/types";
 import { DEFAULT_THEME_ID } from "../lib/themes";
-import { clearCachedTabSnapshot } from "./log-store";
+import { clearCachedTabSnapshot, useLogStore } from "./log-store";
+import { useFilterStore } from "./filter-store";
 import type { ColumnId } from "../lib/column-config";
 import type { CollectionResult } from "../lib/commands";
 import type { WorkspaceId } from "../types/log";
@@ -525,6 +526,9 @@ export const useUiStore = create<UiState>()(
         let newActive = activeTabIndex;
         if (newTabs.length === 0) {
           newActive = -1;
+          // Clear stale log content and filters when all tabs are closed
+          useLogStore.getState().clearActiveFile();
+          useFilterStore.getState().clearFilter();
         } else if (index === activeTabIndex) {
           newActive = index > 0 ? index - 1 : 0;
         } else if (index < activeTabIndex) {
