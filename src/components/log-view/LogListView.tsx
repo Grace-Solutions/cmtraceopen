@@ -13,6 +13,7 @@ import { useUiStore } from "../../stores/ui-store";
 import { useFilterStore } from "../../stores/filter-store";
 import { LogRow } from "./LogRow";
 import type { ErrorCodeSpan } from "../../types/log";
+import { useContextMenu } from "../../hooks/use-context-menu";
 import {
   applyColumnOrder,
   getVisibleColumns,
@@ -92,6 +93,8 @@ export function LogListView() {
     () => getLogListMetrics(logListFontSize),
     [logListFontSize]
   );
+
+  const { showContextMenu } = useContextMenu();
 
   const handleErrorCodeClick = useCallback((span: ErrorCodeSpan) => {
     if (!useUiStore.getState().showInfoPane) {
@@ -381,6 +384,7 @@ export function LogListView() {
                   highlightText={highlightText}
                   highlightCaseSensitive={highlightCaseSensitive}
                   onClick={(id) => { if (id !== selectedId) { suppressScrollRef.current = true; } selectEntry(id); }}
+                  onContextMenu={showContextMenu}
                   onErrorCodeClick={handleErrorCodeClick}
                 />
               </div>
