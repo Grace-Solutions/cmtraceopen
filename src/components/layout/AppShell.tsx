@@ -11,7 +11,7 @@ import { FindBar } from "./FindBar";
 import { FilterDialog } from "../dialogs/FilterDialog";
 import { ErrorLookupDialog } from "../dialogs/ErrorLookupDialog";
 import { AboutDialog } from "../dialogs/AboutDialog";
-import { AccessibilityDialog } from "../dialogs/AccessibilityDialog";
+import { SettingsDialog } from "../dialogs/SettingsDialog";
 import { EvidenceBundleDialog } from "../dialogs/EvidenceBundleDialog";
 import { FileAssociationPromptDialog } from "../dialogs/FileAssociationPromptDialog";
 import { CollectDiagnosticsDialog } from "../dialogs/CollectDiagnosticsDialog";
@@ -59,8 +59,8 @@ export function AppShell() {
   const showFilterDialog = useUiStore((s) => s.showFilterDialog);
   const showErrorLookupDialog = useUiStore((s) => s.showErrorLookupDialog);
   const showAboutDialog = useUiStore((s) => s.showAboutDialog);
-  const showAccessibilityDialog = useUiStore(
-    (s) => s.showAccessibilityDialog
+  const showSettingsDialog = useUiStore(
+    (s) => s.showSettingsDialog
   );
   const showEvidenceBundleDialog = useUiStore(
     (s) => s.showEvidenceBundleDialog
@@ -74,8 +74,8 @@ export function AppShell() {
     (s) => s.setShowErrorLookupDialog
   );
   const setShowAboutDialog = useUiStore((s) => s.setShowAboutDialog);
-  const setShowAccessibilityDialog = useUiStore(
-    (s) => s.setShowAccessibilityDialog
+  const setShowSettingsDialog = useUiStore(
+    (s) => s.setShowSettingsDialog
   );
   const setShowEvidenceBundleDialog = useUiStore(
     (s) => s.setShowEvidenceBundleDialog
@@ -500,9 +500,9 @@ export function AppShell() {
         isOpen={showAboutDialog}
         onClose={() => setShowAboutDialog(false)}
       />
-      <AccessibilityDialog
-        isOpen={showAccessibilityDialog}
-        onClose={() => setShowAccessibilityDialog(false)}
+      <SettingsDialog
+        isOpen={showSettingsDialog}
+        onClose={() => setShowSettingsDialog(false)}
       />
       <EvidenceBundleDialog
         isOpen={showEvidenceBundleDialog}
