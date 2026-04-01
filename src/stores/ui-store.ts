@@ -179,6 +179,8 @@ interface UiState {
     description: string;
     category: string;
   } | null;
+  /** Error code string to pre-populate in the Error Lookup dialog on next open. Consumed and cleared by the dialog. */
+  lookupErrorCode: string | null;
   currentPlatform: PlatformId;
   enabledWorkspaces: WorkspaceId[] | null;
   collectionProgress: CollectionProgressState | null;
@@ -220,6 +222,8 @@ interface UiState {
       category: string;
     } | null
   ) => void;
+  /** Pre-populate the Error Lookup dialog with a code string, then clear it after consumption. */
+  setLookupErrorCode: (code: string | null) => void;
   addErrorLookupHistoryEntry: (entry: ErrorLookupHistoryEntry) => void;
   clearErrorLookupHistory: () => void;
   closeTransientDialogs: (trigger: string) => void;
@@ -304,6 +308,7 @@ export const useUiStore = create<UiState>()(
       activeTabIndex: -1,
       errorLookupHistory: [],
       focusedErrorCode: null,
+      lookupErrorCode: null,
       currentPlatform: "windows" as PlatformId,
       enabledWorkspaces: null,
       collectionProgress: null,
@@ -427,6 +432,7 @@ export const useUiStore = create<UiState>()(
           themeId: DEFAULT_THEME_ID,
         }),
       setFocusedErrorCode: (code) => set({ focusedErrorCode: code }),
+      setLookupErrorCode: (code) => set({ lookupErrorCode: code }),
       addErrorLookupHistoryEntry: (entry) =>
         set((state) => ({
           errorLookupHistory: [

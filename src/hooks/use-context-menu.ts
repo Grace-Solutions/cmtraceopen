@@ -97,6 +97,7 @@ export function useContextMenu() {
             text: `Error Lookup: ${errorCode}`,
             action: () => {
               const uiState = useUiStore.getState();
+              uiState.setLookupErrorCode(errorCode);
               uiState.setShowErrorLookupDialog(true);
             },
           })
@@ -106,8 +107,8 @@ export function useContextMenu() {
       if (entry.sourceFile) {
         items.push(
           await MenuItem.new({
-            id: "open-source-file",
-            text: `Open Source File`,
+            id: "copy-source-path",
+            text: `Copy Source Path`,
             action: () => {
               writeText(entry.sourceFile!);
             },
