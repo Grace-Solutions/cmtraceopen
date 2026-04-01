@@ -160,13 +160,14 @@ interface UiState {
   showFilterDialog: boolean;
   showErrorLookupDialog: boolean;
   showAboutDialog: boolean;
-  showAccessibilityDialog: boolean;
+  showSettingsDialog: boolean;
   showEvidenceBundleDialog: boolean;
   showFileAssociationPrompt: boolean;
   logListFontSize: number;
   logDetailsFontSize: number;
   fontFamily: string | null;
   themeId: ThemeId;
+  hiddenColumns: ColumnId[];
   columnWidths: Record<string, number>;
   columnOrder: ColumnId[] | null;
   sidebarCollapsed: boolean;
@@ -186,6 +187,9 @@ interface UiState {
   collectionProgress: CollectionProgressState | null;
   collectionResult: CollectionResult | null;
   showCollectDiagnosticsDialog: boolean;
+  autoUpdateEnabled: boolean;
+  defaultShowInfoPane: boolean;
+  confirmTabClose: boolean;
   showUpdateDialog: boolean;
 
   setActiveWorkspace: (workspace: WorkspaceId) => void;
@@ -201,7 +205,7 @@ interface UiState {
   setShowFilterDialog: (show: boolean) => void;
   setShowErrorLookupDialog: (show: boolean) => void;
   setShowAboutDialog: (show: boolean) => void;
-  setShowAccessibilityDialog: (show: boolean) => void;
+  setShowSettingsDialog: (show: boolean) => void;
   setShowEvidenceBundleDialog: (show: boolean) => void;
   setShowFileAssociationPrompt: (show: boolean) => void;
   setLogListFontSize: (fontSize: number) => void;
@@ -227,6 +231,10 @@ interface UiState {
   addErrorLookupHistoryEntry: (entry: ErrorLookupHistoryEntry) => void;
   clearErrorLookupHistory: () => void;
   closeTransientDialogs: (trigger: string) => void;
+  toggleColumnVisibility: (columnId: ColumnId) => void;
+  setAutoUpdateEnabled: (enabled: boolean) => void;
+  setDefaultShowInfoPane: (show: boolean) => void;
+  setConfirmTabClose: (confirm: boolean) => void;
   setColumnWidth: (columnId: string, width: number) => void;
   resetColumnWidths: () => void;
   setColumnOrder: (order: ColumnId[]) => void;
@@ -294,13 +302,14 @@ export const useUiStore = create<UiState>()(
       showFilterDialog: false,
       showErrorLookupDialog: false,
       showAboutDialog: false,
-      showAccessibilityDialog: false,
+      showSettingsDialog: false,
       showEvidenceBundleDialog: false,
       showFileAssociationPrompt: false,
       logListFontSize: DEFAULT_LOG_LIST_FONT_SIZE,
       logDetailsFontSize: DEFAULT_LOG_DETAILS_FONT_SIZE,
       fontFamily: null,
       themeId: DEFAULT_THEME_ID,
+      hiddenColumns: [],
       columnWidths: {},
       columnOrder: null,
       sidebarCollapsed: false,
@@ -311,6 +320,9 @@ export const useUiStore = create<UiState>()(
       lookupErrorCode: null,
       currentPlatform: "windows" as PlatformId,
       enabledWorkspaces: null,
+      autoUpdateEnabled: true,
+      defaultShowInfoPane: true,
+      confirmTabClose: false,
       collectionProgress: null,
       collectionResult: null,
       showCollectDiagnosticsDialog: false,
@@ -403,7 +415,7 @@ export const useUiStore = create<UiState>()(
       setShowFilterDialog: (show) => set({ showFilterDialog: show }),
       setShowErrorLookupDialog: (show) => set({ showErrorLookupDialog: show }),
       setShowAboutDialog: (show) => set({ showAboutDialog: show }),
-      setShowAccessibilityDialog: (show) => set({ showAccessibilityDialog: show }),
+      setShowSettingsDialog: (show) => set({ showSettingsDialog: show }),
       setShowEvidenceBundleDialog: (show) => set({ showEvidenceBundleDialog: show }),
       setShowFileAssociationPrompt: (show) => set({ showFileAssociationPrompt: show }),
       setLogListFontSize: (fontSize) =>
@@ -449,7 +461,7 @@ export const useUiStore = create<UiState>()(
           !state.showFilterDialog &&
           !state.showErrorLookupDialog &&
           !state.showAboutDialog &&
-          !state.showAccessibilityDialog &&
+          !state.showSettingsDialog &&
           !state.showEvidenceBundleDialog &&
           !state.showFileAssociationPrompt &&
           !state.showCollectDiagnosticsDialog &&
@@ -465,7 +477,7 @@ export const useUiStore = create<UiState>()(
           showFilterDialog: false,
           showErrorLookupDialog: false,
           showAboutDialog: false,
-          showAccessibilityDialog: false,
+          showSettingsDialog: false,
           showEvidenceBundleDialog: false,
           showFileAssociationPrompt: false,
           showCollectDiagnosticsDialog: false,
@@ -473,6 +485,18 @@ export const useUiStore = create<UiState>()(
         });
       },
 
+      toggleColumnVisibility: (columnId) =>
+        set((state) => {
+          const hidden = state.hiddenColumns.includes(columnId);
+          return {
+            hiddenColumns: hidden
+              ? state.hiddenColumns.filter((id) => id !== columnId)
+              : [...state.hiddenColumns, columnId],
+          };
+        }),
+      setAutoUpdateEnabled: (enabled) => set({ autoUpdateEnabled: enabled }),
+      setDefaultShowInfoPane: (show) => set({ defaultShowInfoPane: show }),
+      setConfirmTabClose: (confirm) => set({ confirmTabClose: confirm }),
       setColumnWidth: (columnId, width) =>
         set((state) => ({
           columnWidths: { ...state.columnWidths, [columnId]: width },
@@ -574,9 +598,13 @@ export const useUiStore = create<UiState>()(
         logDetailsFontSize: state.logDetailsFontSize,
         fontFamily: state.fontFamily,
         themeId: state.themeId,
+        hiddenColumns: state.hiddenColumns,
         columnWidths: state.columnWidths,
         columnOrder: state.columnOrder,
         sidebarCollapsed: state.sidebarCollapsed,
+        autoUpdateEnabled: state.autoUpdateEnabled,
+        defaultShowInfoPane: state.defaultShowInfoPane,
+        confirmTabClose: state.confirmTabClose,
       }),
       merge: (persistedState, currentState) => {
         const raw = persistedState as Partial<UiState> & {
