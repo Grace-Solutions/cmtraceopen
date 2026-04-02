@@ -25,13 +25,35 @@ pub fn parse_evtx_files(paths: &[String]) -> Result<EvtxParseResult, String> {
                     .map(|f| f.to_string_lossy().to_string())
                     .unwrap_or_else(|| path_str.clone());
 
-                channels.push(EvtxChannelInfo {
-                    name: source_label,
-                    event_count: records.len() as u64,
-                    source_type: ChannelSourceType::File {
-                        path: path_str.clone(),
-                    },
-                });
+                // Build one EvtxChannelInfo per distinct channel string found in the records,
+                // so that ChannelPicker can match against r.channel values.
+                let mut channel_counts: std::collections::HashMap<String, u64> =
+                    std::collections::HashMap::new();
+                for r in &records {
+                    *channel_counts.entry(r.channel.clone()).or_insert(0) += 1;
+                }
+
+                if channel_counts.is_empty() {
+                    // No records — still emit an entry keyed by the file basename so the
+                    // file appears in the picker.
+                    channels.push(EvtxChannelInfo {
+                        name: source_label.clone(),
+                        event_count: 0,
+                        source_type: ChannelSourceType::File {
+                            path: path_str.clone(),
+                        },
+                    });
+                } else {
+                    for (channel_name, count) in channel_counts {
+                        channels.push(EvtxChannelInfo {
+                            name: channel_name,
+                            event_count: count,
+                            source_type: ChannelSourceType::File {
+                                path: path_str.clone(),
+                            },
+                        });
+                    }
+                }
 
                 all_records.extend(records);
             }

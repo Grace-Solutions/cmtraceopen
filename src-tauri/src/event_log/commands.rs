@@ -45,7 +45,7 @@ pub async fn evtx_query_channels(
                         all_records.extend(records);
                     }
                     Err(e) => {
-                        eprintln!("Failed to query channel {}: {}", channel, e);
+                        log::warn!("event=evtx_channel_query_error channel=\"{}\" error=\"{}\"", channel, e);
                         parse_errors += 1;
                     }
                 }
