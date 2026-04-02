@@ -7,6 +7,8 @@ pub mod dsregcmd;
 pub mod error;
 pub mod error_db;
 pub mod intune;
+#[cfg(feature = "event-log")]
+pub mod event_log;
 #[cfg(feature = "macos-diag")]
 pub mod macos_diag;
 mod menu;
