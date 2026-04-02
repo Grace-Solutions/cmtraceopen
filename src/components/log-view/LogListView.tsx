@@ -37,7 +37,7 @@ export function LogListView() {
   const isPaused = useLogStore((s) => s.isPaused);
   const findMatchIds = useLogStore((s) => s.findMatchIds);
   const showDetails = useUiStore((s) => s.showDetails);
-  const hiddenColumns = useUiStore((s) => s.hiddenColumns);
+
   const logListFontSize = useUiStore((s) => s.logListFontSize);
   const themeId = useUiStore((s) => s.themeId);
   const severityPalette = useMemo(
@@ -84,10 +84,8 @@ export function LogListView() {
   );
   const visibleColumns = useMemo(
     () =>
-      getVisibleColumns(orderedColumns, showDetails).filter(
-        (col) => !hiddenColumns.includes(col.id)
-      ),
-    [orderedColumns, showDetails, hiddenColumns]
+      getVisibleColumns(orderedColumns, showDetails),
+    [orderedColumns, showDetails]
   );
   const gridTemplateColumns = useMemo(
     () => buildGridTemplateColumns(visibleColumns, columnWidths),

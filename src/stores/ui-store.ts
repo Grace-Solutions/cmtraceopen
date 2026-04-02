@@ -176,7 +176,6 @@ interface UiState {
   logDetailsFontSize: number;
   fontFamily: string | null;
   themeId: ThemeId;
-  hiddenColumns: ColumnId[];
   columnWidths: Record<string, number>;
   columnOrder: ColumnId[] | null;
   sidebarCollapsed: boolean;
@@ -240,7 +239,6 @@ interface UiState {
   addErrorLookupHistoryEntry: (entry: ErrorLookupHistoryEntry) => void;
   clearErrorLookupHistory: () => void;
   closeTransientDialogs: (trigger: string) => void;
-  toggleColumnVisibility: (columnId: ColumnId) => void;
   setAutoUpdateEnabled: (enabled: boolean) => void;
   setDefaultShowInfoPane: (show: boolean) => void;
   setConfirmTabClose: (confirm: boolean) => void;
@@ -318,7 +316,6 @@ export const useUiStore = create<UiState>()(
       logDetailsFontSize: DEFAULT_LOG_DETAILS_FONT_SIZE,
       fontFamily: null,
       themeId: DEFAULT_THEME_ID,
-      hiddenColumns: [],
       columnWidths: {},
       columnOrder: null,
       sidebarCollapsed: false,
@@ -494,15 +491,6 @@ export const useUiStore = create<UiState>()(
         });
       },
 
-      toggleColumnVisibility: (columnId) =>
-        set((state) => {
-          const hidden = state.hiddenColumns.includes(columnId);
-          return {
-            hiddenColumns: hidden
-              ? state.hiddenColumns.filter((id) => id !== columnId)
-              : [...state.hiddenColumns, columnId],
-          };
-        }),
       setAutoUpdateEnabled: (enabled) => set({ autoUpdateEnabled: enabled }),
       setDefaultShowInfoPane: (show) => set({ defaultShowInfoPane: show }),
       setConfirmTabClose: (confirm) => set({ confirmTabClose: confirm }),
@@ -515,7 +503,7 @@ export const useUiStore = create<UiState>()(
       resetColumnOrder: () => set({ columnOrder: null }),
       toggleSidebar: () =>
         set((state) => ({ sidebarCollapsed: !state.sidebarCollapsed })),
-      resetColumns: () => set({ columnWidths: {}, columnOrder: null, hiddenColumns: [] }),
+      resetColumns: () => set({ columnWidths: {}, columnOrder: null }),
 
       openTab: (filePath, fileName, sourceContext, fileKind) => {
         if (!filePath) {
@@ -614,7 +602,6 @@ export const useUiStore = create<UiState>()(
         logDetailsFontSize: state.logDetailsFontSize,
         fontFamily: state.fontFamily,
         themeId: state.themeId,
-        hiddenColumns: state.hiddenColumns,
         columnWidths: state.columnWidths,
         columnOrder: state.columnOrder,
         sidebarCollapsed: state.sidebarCollapsed,
