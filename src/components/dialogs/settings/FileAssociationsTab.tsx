@@ -37,6 +37,7 @@ export function FileAssociationsTab() {
       </div>
 
       <button
+        type="button"
         onClick={handleAssociate}
         style={{
           padding: "6px 16px",

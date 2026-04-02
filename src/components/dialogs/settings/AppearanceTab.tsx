@@ -190,6 +190,7 @@ export function AppearanceTab() {
             <>
               {/* Default (System) option */}
               <button
+                type="button"
                 onClick={() => setFontFamily(null)}
                 style={{
                   display: "block",
@@ -215,6 +216,7 @@ export function AppearanceTab() {
               </button>
               {filteredFonts.map((name) => (
                 <button
+                  type="button"
                   key={name}
                   onClick={() => setFontFamily(name)}
                   style={{
@@ -316,6 +318,7 @@ export function AppearanceTab() {
           Defaults: list {DEFAULT_LOG_LIST_FONT_SIZE}px, details {DEFAULT_LOG_DETAILS_FONT_SIZE}px
         </div>
         <button
+          type="button"
           onClick={resetLogAccessibilityPreferences}
           style={{
             padding: "4px 12px",

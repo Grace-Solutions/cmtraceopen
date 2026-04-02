@@ -101,6 +101,7 @@ export function UpdatesTab() {
           >
             <span>v{skippedVersion} is being skipped</span>
             <button
+              type="button"
               onClick={handleClearSkipped}
               style={{
                 padding: "3px 10px",

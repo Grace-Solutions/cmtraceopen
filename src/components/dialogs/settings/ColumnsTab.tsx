@@ -61,6 +61,7 @@ export function ColumnsTab() {
 
       <div style={{ marginTop: "16px", display: "flex", justifyContent: "flex-end" }}>
         <button
+          type="button"
           onClick={resetColumns}
           style={{
             padding: "4px 12px",

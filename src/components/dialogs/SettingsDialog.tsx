@@ -162,6 +162,7 @@ export function SettingsDialog({ isOpen, onClose }: SettingsDialogProps) {
         >
           <div style={{ fontSize: "16px", fontWeight: "bold" }}>Settings</div>
           <button
+            type="button"
             onClick={onClose}
             aria-label="Close settings"
             style={{
@@ -190,6 +191,7 @@ export function SettingsDialog({ isOpen, onClose }: SettingsDialogProps) {
         >
           {visibleTabs.map((tab) => (
             <button
+              type="button"
               key={tab.id}
               role="tab"
               aria-selected={activeTab === tab.id}

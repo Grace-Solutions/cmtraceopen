@@ -541,6 +541,7 @@ export const useUiStore = create<UiState>()(
         set({
           openTabs: [...openTabs, newTab],
           activeTabIndex: openTabs.length,
+          showInfoPane: get().defaultShowInfoPane,
         });
       },
 
@@ -549,6 +550,12 @@ export const useUiStore = create<UiState>()(
         if (index < 0 || index >= openTabs.length) {
           console.warn("[ui-store] closeTab: invalid index", { index, tabCount: openTabs.length });
           return;
+        }
+        if (get().confirmTabClose) {
+          const tab = openTabs[index];
+          const fileName = tab.filePath.split(/[/\\]/).pop() ?? tab.filePath;
+          const confirmed = window.confirm(`Close "${fileName}"?`);
+          if (!confirmed) return;
         }
         // Evict parsed entry cache for the closed tab
         clearCachedTabSnapshot(openTabs[index].filePath);
