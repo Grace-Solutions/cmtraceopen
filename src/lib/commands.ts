@@ -11,6 +11,7 @@ import type {
 import type { EvidenceArtifactPreview, EvidenceBundleDetails, EvidenceArtifactIntakeKind } from "../types/evidence";
 import type { RegistryParseResult } from "../types/registry";
 import type { IntuneAnalysisResult } from "../types/intune";
+import type { SysmonAnalysisResult } from "../types/sysmon";
 import type {
   DsregcmdAnalysisResult,
   DsregcmdCaptureResult,
@@ -183,6 +184,18 @@ export async function analyzeIntuneLogs(
   options?: AnalyzeIntuneLogsOptions
 ): Promise<IntuneAnalysisResult> {
   return invokeCommand<IntuneAnalysisResult>("analyze_intune_logs", {
+    path,
+    requestId,
+    includeLiveEventLogs: options?.includeLiveEventLogs ?? false,
+  });
+}
+
+export async function analyzeSysmonLogs(
+  path: string,
+  requestId: string,
+  options?: { includeLiveEventLogs?: boolean }
+): Promise<SysmonAnalysisResult> {
+  return invokeCommand<SysmonAnalysisResult>("analyze_sysmon_logs", {
     path,
     requestId,
     includeLiveEventLogs: options?.includeLiveEventLogs ?? false,
