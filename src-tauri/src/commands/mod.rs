@@ -17,11 +17,14 @@ pub mod intune_bundle;
 #[cfg(feature = "intune-diagnostics")]
 pub mod intune_diagnostics;
 pub mod app_config;
+#[cfg(target_os = "windows")]
+pub mod graph_api;
 pub mod known_sources;
 #[cfg(feature = "macos-diag")]
 pub mod macos_diag;
 pub mod parsing;
 pub mod registry_ops;
 pub mod reveal;
+#[cfg(feature = "sysmon")]
 pub mod sysmon;
 pub mod system_preferences;

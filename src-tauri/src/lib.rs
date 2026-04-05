@@ -6,6 +6,8 @@ mod commands;
 pub mod dsregcmd;
 pub mod error;
 pub mod error_db;
+#[cfg(target_os = "windows")]
+pub mod graph_api;
 pub mod intune;
 #[cfg(feature = "event-log")]
 pub mod event_log;
@@ -14,11 +16,17 @@ pub mod macos_diag;
 mod menu;
 mod models;
 pub mod parser;
+#[cfg(feature = "sysmon")]
 pub mod sysmon;
 mod state;
 mod watcher;
 
 use state::app_state::AppState;
+
+#[cfg(target_os = "windows")]
+use tauri::Manager;
+#[cfg(target_os = "windows")]
+use graph_api::GraphAuthState;
 
 /// Returns all non-flag CLI arguments as potential file paths.
 ///
@@ -54,6 +62,18 @@ pub fn run() {
                 menu::handle_menu_event(app_handle, event.id().as_ref());
             });
 
+            #[cfg(target_os = "windows")]
+            app.manage(GraphAuthState::new());
+
+            // Auto-open DevTools in debug builds
+            #[cfg(all(debug_assertions, desktop))]
+            {
+                use tauri::Manager as _;
+                if let Some(window) = app.get_webview_window("main") {
+                    window.open_devtools();
+                }
+            }
+
             Ok(())
         })
         .manage(AppState::new(initial_file_paths))
@@ -69,6 +89,7 @@ pub fn run() {
             commands::file_ops::inspect_path_kind,
             commands::file_ops::write_text_output_file,
             commands::file_ops::get_initial_file_paths,
+            commands::file_ops::compute_file_hash,
             commands::bundle_ops::inspect_evidence_bundle,
             commands::bundle_ops::inspect_evidence_artifact,
             commands::known_sources::get_known_log_sources,
@@ -119,6 +140,17 @@ pub fn run() {
             event_log::commands::evtx_enumerate_channels,
             #[cfg(feature = "event-log")]
             event_log::commands::evtx_query_channels,
+            #[cfg(target_os = "windows")]
+            commands::graph_api::graph_authenticate,
+            #[cfg(target_os = "windows")]
+            commands::graph_api::graph_get_auth_status,
+            #[cfg(target_os = "windows")]
+            commands::graph_api::graph_sign_out,
+            #[cfg(target_os = "windows")]
+            commands::graph_api::graph_resolve_guids,
+            #[cfg(target_os = "windows")]
+            commands::graph_api::graph_fetch_all_apps,
+            #[cfg(feature = "sysmon")]
             commands::sysmon::analyze_sysmon_logs,
         ])
         .run(tauri::generate_context!())

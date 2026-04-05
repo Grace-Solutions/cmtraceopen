@@ -404,6 +404,7 @@ export function useAppActions(): AppActionHandlers {
 
         const result = await analyzeIntuneLogs(getLogSourcePath(source), requestId, {
           includeLiveEventLogs: shouldIncludeLiveEventLogs(source),
+          graphApiEnabled: useUiStore.getState().graphApiEnabled,
         });
 
         startTransition(() => {
@@ -850,11 +851,17 @@ export function Toolbar() {
   const activeView = useUiStore((s) => s.activeView);
   const setActiveView = useUiStore((s) => s.setActiveView);
   const currentPlatform = useUiStore((s) => s.currentPlatform);
+  const activeWorkspace = useUiStore((s) => s.activeWorkspace);
+  const openTabs = useUiStore((s) => s.openTabs);
+  const setShowMergeTabsDialog = useUiStore((s) => s.setShowMergeTabsDialog);
+  const setShowDiffConfigDialog = useUiStore((s) => s.setShowDiffConfigDialog);
   const enabledWorkspaces = useUiStore((s) => s.enabledWorkspaces);
   const availableWorkspaces = useMemo(
     () => getAvailableWorkspaces(currentPlatform, enabledWorkspaces),
     [currentPlatform, enabledWorkspaces]
   );
+
+  const canMergeTabs = activeWorkspace === "log" && openTabs.length >= 2;
 
   const {
     commandState,
@@ -1038,6 +1045,43 @@ export function Toolbar() {
           minWidth: "120px",
         }}
       />
+
+      {canMergeTabs && (
+        <button
+          type="button"
+          onClick={() => setShowMergeTabsDialog(true)}
+          title="Merge open tabs into a unified timeline"
+          style={{
+            fontSize: "12px",
+            padding: "4px 10px",
+            border: `1px solid ${tokens.colorNeutralStroke2}`,
+            borderRadius: "4px",
+            backgroundColor: tokens.colorNeutralBackground1,
+            color: tokens.colorNeutralForeground1,
+            cursor: "pointer",
+          }}
+        >
+          Merge Tabs...
+        </button>
+      )}
+      {canMergeTabs && (
+        <button
+          type="button"
+          onClick={() => setShowDiffConfigDialog(true)}
+          title="Compare two open tabs"
+          style={{
+            fontSize: "12px",
+            padding: "4px 10px",
+            border: `1px solid ${tokens.colorNeutralStroke2}`,
+            borderRadius: "4px",
+            backgroundColor: tokens.colorNeutralBackground1,
+            color: tokens.colorNeutralForeground1,
+            cursor: "pointer",
+          }}
+        >
+          Diff Tabs...
+        </button>
+      )}
 
       <Divider vertical />
 
