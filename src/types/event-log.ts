@@ -1,4 +1,7 @@
-import type { IntuneTimestampBounds } from "./intune";
+export interface IntuneTimestampBounds {
+  firstTimestamp: string | null;
+  lastTimestamp: string | null;
+}
 
 export type EventLogSeverity =
   | "Critical"

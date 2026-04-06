@@ -28,7 +28,6 @@ use tauri::Manager;
 #[cfg(target_os = "windows")]
 use graph_api::GraphAuthState;
 
-
 /// Returns all non-flag CLI arguments as potential file paths.
 ///
 /// When the OS opens the application via a file association (e.g. double-clicking
@@ -74,7 +73,6 @@ pub fn run() {
                     window.open_devtools();
                 }
             }
-
 
             Ok(())
         })

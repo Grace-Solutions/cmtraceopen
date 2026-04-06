@@ -1,5 +1,4 @@
 import {
-  startTransition,
   useCallback,
   useEffect,
   useMemo,
@@ -20,8 +19,6 @@ import {
 import { open } from "@tauri-apps/plugin-dialog";
 import { platform } from "@tauri-apps/plugin-os";
 import {
-  analyzeIntuneLogs,
-  analyzeSysmonLogs,
   getAvailableWorkspaces as getAvailableBackendWorkspaces,
   inspectPathKind,
 } from "../../lib/commands";
@@ -32,13 +29,13 @@ import {
 } from "../../lib/dsregcmd-source";
 import { useLogStore } from "../../stores/log-store";
 import { useFilterStore } from "../../stores/filter-store";
-import { useIntuneStore } from "../../stores/intune-store";
-import { useDsregcmdStore } from "../../stores/dsregcmd-store";
-import { useSysmonStore } from "../../stores/sysmon-store";
-import { isIntuneWorkspace, getAvailableWorkspaces, type IntuneWorkspaceId, type WorkspaceId, type PlatformId, useUiStore } from "../../stores/ui-store";
+import { useIntuneStore } from "../../workspaces/intune/intune-store";
+import { useDsregcmdStore } from "../../workspaces/dsregcmd/dsregcmd-store";
+import { useSysmonStore } from "../../workspaces/sysmon/sysmon-store";
+import { isIntuneWorkspace, getAvailableWorkspaces, type WorkspaceId, type PlatformId, useUiStore } from "../../stores/ui-store";
+import { getWorkspace } from "../../workspaces/registry";
 import { ThemePicker } from "./ThemePicker";
 import {
-  getLogSourcePath,
   getKnownSourceMetadataById,
   loadLogSource,
   loadPathAsLogSource,
@@ -73,89 +70,7 @@ function resolveRefreshSource(
   return null;
 }
 
-const LOG_FILE_DIALOG_FILTERS = [
-  { name: "Log Files", extensions: ["log"] },
-  { name: "Old Log Files", extensions: ["lo_"] },
-  { name: "Registry Files", extensions: ["reg"] },
-  { name: "All Files", extensions: ["*"] },
-];
-
-const INTUNE_FILE_DIALOG_FILTERS = [
-  { name: "Intune IME Logs", extensions: ["log"] },
-  { name: "All Files", extensions: ["*"] },
-];
-
-const DSREGCMD_FILE_DIALOG_FILTERS = [
-  { name: "Text Files", extensions: ["txt"] },
-  { name: "Log Files", extensions: ["log"] },
-  { name: "All Files", extensions: ["*"] },
-];
-
-const LIVE_INTUNE_SOURCE_ID = "windows-intune-ime-logs";
-
-const WORKSPACE_LABELS: Record<WorkspaceId, string> = {
-  log: "Log Explorer",
-  intune: "Intune Diagnostics",
-  "new-intune": "New Intune Workspace",
-  dsregcmd: "dsregcmd",
-  "macos-diag": "macOS Diagnostics",
-  deployment: "Software Deployment",
-  "event-log": "Event Log Viewer",
-  sysmon: "Sysmon",
-};
-
-const SYSMON_FILE_DIALOG_FILTERS = [
-  { name: "EVTX Files", extensions: ["evtx"] },
-  { name: "All Files", extensions: ["*"] },
-];
-
-function getOpenFileDialogFilters(workspace: WorkspaceId) {
-  if (isIntuneWorkspace(workspace)) {
-    return INTUNE_FILE_DIALOG_FILTERS;
-  }
-
-  if (workspace === "dsregcmd") {
-    return DSREGCMD_FILE_DIALOG_FILTERS;
-  }
-
-  if (workspace === "sysmon") {
-    return SYSMON_FILE_DIALOG_FILTERS;
-  }
-
-  return LOG_FILE_DIALOG_FILTERS;
-}
-
-function getOpenActionLabels(workspace: WorkspaceId) {
-  if (workspace === "dsregcmd") {
-    return {
-      file: "Open Text File",
-      folder: "Open Evidence Folder",
-      openPlaceholder: "Open dsregcmd Source...",
-    };
-  }
-
-  if (isIntuneWorkspace(workspace)) {
-    return {
-      file: "Open IME Log File",
-      folder: "Open IME Or Evidence Folder",
-      openPlaceholder: "Open Intune Source...",
-    };
-  }
-
-  if (workspace === "sysmon") {
-    return {
-      file: "Open EVTX File",
-      folder: "Open EVTX Folder",
-      openPlaceholder: "Open Sysmon Source...",
-    };
-  }
-
-  return {
-    file: "Open File",
-    folder: "Open Folder",
-    openPlaceholder: "Open...",
-  };
-}
+const LIVE_SYSMON_SOURCE_ID = "windows-sysmon-live-events";
 
 async function inferPathKind(path: string): Promise<"file" | "folder" | "unknown"> {
   try {
@@ -163,26 +78,6 @@ async function inferPathKind(path: string): Promise<"file" | "folder" | "unknown
   } catch {
     return "unknown";
   }
-}
-
-function createIntuneAnalysisRequestId(): string {
-  return `intune-${Date.now()}-${Math.random().toString(36).slice(2, 10)}`;
-}
-
-function shouldSyncSourceBeforeIntuneAnalysis(source: LogSource): boolean {
-  if (source.kind === "file") {
-    return true;
-  }
-
-  return source.kind === "known" && source.pathKind === "file";
-}
-
-function shouldIncludeLiveEventLogs(source: LogSource): boolean {
-  return source.kind === "known" && source.sourceId === LIVE_INTUNE_SOURCE_ID;
-}
-
-function shouldIncludeSysmonLiveEventLogs(source: LogSource): boolean {
-  return source.kind === "known" || (source.kind === "file" && source.path === "live-event-log");
 }
 
 export interface OpenKnownSourceCatalogAction
@@ -250,17 +145,11 @@ export function useAppActions(): AppActionHandlers {
   const bundleMetadata = useLogStore((s) => s.bundleMetadata);
   const intuneIsAnalyzing = useIntuneStore((s) => s.isAnalyzing);
   const intuneEvidenceBundle = useIntuneStore((s) => s.evidenceBundle);
-  const beginIntuneAnalysis = useIntuneStore((s) => s.beginAnalysis);
-  const failIntuneAnalysis = useIntuneStore((s) => s.failAnalysis);
-  const setIntuneResults = useIntuneStore((s) => s.setResults);
   const dsregcmdIsAnalyzing = useDsregcmdStore((s) => s.isAnalyzing);
   const dsregcmdSource = useDsregcmdStore((s) => s.sourceContext.source);
   const dsregcmdBundlePath = useDsregcmdStore((s) => s.sourceContext.bundlePath);
   const sysmonIsAnalyzing = useSysmonStore((s) => s.isAnalyzing);
   const sysmonSourcePath = useSysmonStore((s) => s.sourcePath);
-  const beginSysmonAnalysis = useSysmonStore((s) => s.beginAnalysis);
-  const setSysmonResults = useSysmonStore((s) => s.setResults);
-  const failSysmonAnalysis = useSysmonStore((s) => s.failAnalysis);
 
   const activeWorkspace = useUiStore((s) => s.activeWorkspace);
   const activeView = useUiStore((s) => s.activeView);
@@ -296,16 +185,15 @@ export function useAppActions(): AppActionHandlers {
   );
   const isSourceCommandBusy = isLoading || intuneIsAnalyzing || dsregcmdIsAnalyzing || sysmonIsAnalyzing;
 
-  const commandState = useMemo<AppCommandState>(
-    () => ({
+  const commandState = useMemo<AppCommandState>(() => {
+    const ws = getWorkspace(activeWorkspace);
+    const wsCaps = ws.capabilities ?? {};
+    return {
       canOpenSources: !isSourceCommandBusy,
-      canOpenKnownSources:
-        !isSourceCommandBusy && activeWorkspace !== "dsregcmd",
-      canPauseResume:
-        activeWorkspace === "log" && !isLoading && refreshSource !== null,
-      canFind: activeWorkspace === "log" && entriesCount > 0,
-      canFilter:
-        activeWorkspace === "log" && entriesCount > 0 && !isFiltering,
+      canOpenKnownSources: !isSourceCommandBusy && (wsCaps.knownSources ?? true),
+      canPauseResume: (wsCaps.tailing ?? false) && !isLoading && refreshSource !== null,
+      canFind: (wsCaps.findBar ?? false) && entriesCount > 0,
+      canFilter: (wsCaps.findBar ?? false) && entriesCount > 0 && !isFiltering,
       canRefresh:
         !isSourceCommandBusy &&
         (activeWorkspace === "dsregcmd"
@@ -313,8 +201,8 @@ export function useAppActions(): AppActionHandlers {
           : activeWorkspace === "sysmon"
             ? sysmonSourcePath !== null
             : refreshSource !== null),
-      canToggleDetailsPane: activeView === "log",
-      canToggleInfoPane: activeView === "log",
+      canToggleDetailsPane: wsCaps.detailsPane ?? false,
+      canToggleInfoPane: wsCaps.infoPane ?? false,
       canShowEvidenceBundle:
         activeView === "log"
           ? bundleMetadata !== null
@@ -335,28 +223,27 @@ export function useAppActions(): AppActionHandlers {
       isFiltering,
       filterError,
       activeView,
-    }),
-    [
-      activeWorkspace,
-      activeFilterCount,
-      activeView,
-      bundleMetadata,
-      dsregcmdBundlePath,
-      dsregcmdSource,
-      entriesCount,
-      filterError,
-      intuneEvidenceBundle,
-      intuneIsAnalyzing,
-      isFiltering,
-      isLoading,
-      isPaused,
-      isSourceCommandBusy,
-      refreshSource,
-      showDetails,
-      showInfoPane,
-      sysmonSourcePath,
-    ]
-  );
+    };
+  }, [
+    activeWorkspace,
+    activeFilterCount,
+    activeView,
+    bundleMetadata,
+    dsregcmdBundlePath,
+    dsregcmdSource,
+    entriesCount,
+    filterError,
+    intuneEvidenceBundle,
+    intuneIsAnalyzing,
+    isFiltering,
+    isLoading,
+    isPaused,
+    isSourceCommandBusy,
+    refreshSource,
+    showDetails,
+    showInfoPane,
+    sysmonSourcePath,
+  ]);
 
   const loadLogWorkspaceSource = useCallback(
     async (source: LogSource, trigger: string) => {
@@ -380,142 +267,16 @@ export function useAppActions(): AppActionHandlers {
     []
   );
 
-  const analyzeIntuneWorkspaceSource = useCallback(
-    async (source: LogSource, trigger: string, workspace: IntuneWorkspaceId) => {
-      useUiStore.getState().ensureWorkspaceVisible(workspace, trigger);
-      const requestId = createIntuneAnalysisRequestId();
-      beginIntuneAnalysis(
-        getLogSourcePath(source),
-        source.kind === "known" ? "known" : source.kind,
-        requestId
-      );
-
-      try {
-        if (shouldSyncSourceBeforeIntuneAnalysis(source)) {
-          await loadLogSource(source).catch((error) => {
-            console.warn("[app-actions] failed to sync source before Intune analysis", {
-              source,
-              trigger,
-              error,
-            });
-          });
-        }
-
-        const result = await analyzeIntuneLogs(getLogSourcePath(source), requestId, {
-          includeLiveEventLogs: shouldIncludeLiveEventLogs(source),
-          graphApiEnabled: useUiStore.getState().graphApiEnabled,
-        });
-
-        startTransition(() => {
-          setIntuneResults(
-            result.events,
-            result.downloads,
-            result.summary,
-            result.diagnostics,
-            result.sourceFile,
-            result.sourceFiles,
-            {
-              diagnosticsConfidence: result.diagnosticsConfidence,
-              diagnosticsCoverage: result.diagnosticsCoverage,
-              repeatedFailures: result.repeatedFailures,
-              evidenceBundle: result.evidenceBundle ?? null,
-              eventLogAnalysis: result.eventLogAnalysis ?? null,
-              policyMetadata: result.policyMetadata ?? undefined,
-              guidRegistry: result.guidRegistry,
-            }
-          );
-        });
-      } catch (error) {
-        console.error("[app-actions] failed to analyze Intune source", {
-          source,
-          trigger,
-          error,
-        });
-        failIntuneAnalysis(error);
-      }
-    },
-    [beginIntuneAnalysis, failIntuneAnalysis, setIntuneResults]
-  );
-
-  const analyzeDsregcmdWorkspaceSource = useCallback(
-    async (source: LogSource, trigger: string) => {
-      useUiStore.getState().ensureWorkspaceVisible("dsregcmd", trigger);
-
-      if (source.kind === "known") {
-        throw new Error("Known log presets are not supported in the dsregcmd workspace.");
-      }
-
-      await analyzeDsregcmdSource(source);
-    },
-    []
-  );
-
-  const analyzeSysmonWorkspaceSource = useCallback(
-    async (source: LogSource, trigger: string) => {
-      useUiStore.getState().ensureWorkspaceVisible("sysmon", trigger);
-      const sourcePath = getLogSourcePath(source);
-      const requestId = `sysmon-${Date.now()}`;
-      beginSysmonAnalysis(sourcePath, requestId);
-
-      try {
-        const result = await analyzeSysmonLogs(sourcePath, requestId, {
-          includeLiveEventLogs: shouldIncludeSysmonLiveEventLogs(source),
-        });
-        startTransition(() => {
-          setSysmonResults(result);
-        });
-      } catch (error) {
-        console.error("[app-actions] failed to analyze Sysmon source", {
-          source,
-          trigger,
-          error,
-        });
-        failSysmonAnalysis(error instanceof Error ? error.message : String(error));
-      }
-    },
-    [beginSysmonAnalysis, setSysmonResults, failSysmonAnalysis]
-  );
-
   const openSourceForWorkspace = useCallback(
     async (source: LogSource, trigger: string, workspace: WorkspaceId) => {
-      if (isIntuneWorkspace(workspace)) {
-        await analyzeIntuneWorkspaceSource(source, trigger, workspace);
-        return;
+      const ws = getWorkspace(workspace);
+      if (ws.onOpenSource) {
+        await ws.onOpenSource(source, trigger);
+      } else {
+        await loadLogWorkspaceSource(source, trigger);
       }
-
-      if (workspace === "dsregcmd") {
-        await analyzeDsregcmdWorkspaceSource(source, trigger);
-        return;
-      }
-
-      if (workspace === "sysmon") {
-        await analyzeSysmonWorkspaceSource(source, trigger);
-        return;
-      }
-
-      if (workspace === "deployment") {
-        // Extract folder path from source
-        const folderPath =
-          source.kind === "folder"
-            ? source.path
-            : source.kind === "known"
-              ? source.defaultPath
-              : null;
-        if (folderPath) {
-          const { useDeploymentStore } = await import("../../stores/deployment-store");
-          await useDeploymentStore.getState().analyzeFolder(folderPath);
-          return;
-        }
-      }
-
-      await loadLogWorkspaceSource(source, trigger);
     },
-    [
-      analyzeDsregcmdWorkspaceSource,
-      analyzeIntuneWorkspaceSource,
-      analyzeSysmonWorkspaceSource,
-      loadLogWorkspaceSource,
-    ]
+    [loadLogWorkspaceSource],
   );
 
   const openPathForActiveWorkspace = useCallback(
@@ -532,12 +293,12 @@ export function useAppActions(): AppActionHandlers {
           pathKind === "folder"
             ? { kind: "folder", path }
             : { kind: "file", path };
-        await analyzeIntuneWorkspaceSource(source, "drag-drop.path-open", activeWorkspace);
+        await getWorkspace(activeWorkspace).onOpenSource!(source, "drag-drop.path-open");
         return;
       }
 
       if (activeWorkspace === "deployment") {
-        const { useDeploymentStore } = await import("../../stores/deployment-store");
+        const { useDeploymentStore } = await import("../../workspaces/deployment/deployment-store");
         await useDeploymentStore.getState().analyzeFolder(path);
         return;
       }
@@ -548,7 +309,7 @@ export function useAppActions(): AppActionHandlers {
         fallbackToFolder: true,
       });
     },
-    [activeWorkspace, analyzeIntuneWorkspaceSource]
+    [activeWorkspace],
   );
 
   const openKnownSourceCatalogAction = useCallback(
@@ -592,9 +353,15 @@ export function useAppActions(): AppActionHandlers {
 
     const isLogWorkspace = activeWorkspace === "log";
 
+    const activeWorkspaceDefinition = getWorkspace(activeWorkspace);
+    const fileDialogFilters = activeWorkspaceDefinition.fileFilters ?? [
+      { name: "Log Files", extensions: ["log", "txt", "csv", "json", "xml", "evtx"] },
+      { name: "All Files", extensions: ["*"] },
+    ];
+
     const selected = await open({
       multiple: isLogWorkspace,
-      filters: getOpenFileDialogFilters(activeWorkspace),
+      filters: fileDialogFilters,
     });
 
     if (!selected) return;
@@ -759,9 +526,12 @@ export function useAppActions(): AppActionHandlers {
 
     if (activeWorkspace === "sysmon") {
       if (sysmonSourcePath) {
-        await analyzeSysmonWorkspaceSource(
-          { kind: "file", path: sysmonSourcePath },
-          "app-actions.refresh"
+        const isLiveSource = sysmonSourcePath === "live-event-log";
+        await getWorkspace("sysmon").onOpenSource!(
+          isLiveSource
+            ? { kind: "known", sourceId: LIVE_SYSMON_SOURCE_ID, defaultPath: sysmonSourcePath, pathKind: "folder" }
+            : { kind: "file", path: sysmonSourcePath },
+          "app-actions.refresh",
         );
       }
       return;
@@ -772,7 +542,7 @@ export function useAppActions(): AppActionHandlers {
     }
 
     if (isIntuneWorkspace(activeWorkspace)) {
-      await analyzeIntuneWorkspaceSource(refreshSource, "app-actions.refresh", activeWorkspace);
+      await getWorkspace(activeWorkspace).onOpenSource!(refreshSource, "app-actions.refresh");
       return;
     }
 
@@ -784,8 +554,6 @@ export function useAppActions(): AppActionHandlers {
     });
   }, [
     activeWorkspace,
-    analyzeIntuneWorkspaceSource,
-    analyzeSysmonWorkspaceSource,
     commandState.canRefresh,
     refreshSource,
     selectedSourceFilePath,
@@ -912,10 +680,14 @@ export function Toolbar() {
     };
   }, []);
 
-  const openLabels = useMemo(
-    () => getOpenActionLabels(activeView),
-    [activeView]
-  );
+  const openLabels = useMemo(() => {
+    const ws = getWorkspace(activeView);
+    return ws.actionLabels ?? {
+      file: "Open File",
+      folder: "Open Folder",
+      placeholder: "Open...",
+    };
+  }, [activeView]);
 
 
   return (
@@ -936,9 +708,9 @@ export function Toolbar() {
           <Button
             size="small"
             disabled={!commandState.canOpenSources}
-            title={openLabels.openPlaceholder}
+            title={openLabels.placeholder}
           >
-            {openLabels.openPlaceholder}
+            {openLabels.placeholder}
           </Button>
         </MenuTrigger>
         <MenuPopover>
@@ -1127,7 +899,7 @@ export function Toolbar() {
             Workspace:
           </label>
           <Dropdown
-            value={WORKSPACE_LABELS[activeView]}
+            value={getWorkspace(activeView).label}
             selectedOptions={[activeView]}
             onOptionSelect={(_e, data) => {
               if (data.optionValue) {
@@ -1139,7 +911,7 @@ export function Toolbar() {
             aria-label="Workspace"
           >
             {availableWorkspaces.map((wsId) => (
-              <Option key={wsId} value={wsId}>{WORKSPACE_LABELS[wsId]}</Option>
+              <Option key={wsId} value={wsId}>{getWorkspace(wsId).label}</Option>
             ))}
           </Dropdown>
         </>

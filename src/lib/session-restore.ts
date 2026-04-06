@@ -85,6 +85,11 @@ export async function restoreSession(sessionPath: string): Promise<string | null
     console.warn("[session] file integrity warnings:", parts.join("; "), warnings);
   }
 
+  if (validTabs.length === 0) {
+    console.error("[session] no valid files to restore");
+    return null;
+  }
+
   // Clear current state
   useLogStore.getState().clear();
 
@@ -97,15 +102,39 @@ export async function restoreSession(sessionPath: string): Promise<string | null
   // Add to recent sessions
   uiStore.addRecentSession(sessionPath);
 
-  // Load valid files if any exist
-  if (validTabs.length > 0) {
-    const filePaths = validTabs.map((t) => t.filePath);
+  // Load each file individually to create proper per-file tabs
+  const filePaths = validTabs.map((t) => t.filePath);
+  try {
+    const { loadPathAsLogSource } = await import("./log-source");
+    for (const tab of validTabs) {
+      try {
+        await loadPathAsLogSource(tab.filePath, { fallbackToFolder: false });
+      } catch (error) {
+        console.warn("[session] failed to load file during restore", { filePath: tab.filePath, error });
+      }
+    }
+  } catch (error) {
+    console.error("[session] failed to import log-source during restore", error);
+    // Fallback: try the aggregate load path
     try {
       const { loadFilesAsLogSource } = await import("./log-source");
       await loadFilesAsLogSource(filePaths);
-    } catch (error) {
-      console.error("[session] failed to parse files during restore", error);
-      console.warn("[session] partial restore: files could not be loaded, but session metadata was applied", { filePaths });
+    } catch (fallbackError) {
+      console.error("[session] fallback aggregate load also failed", fallbackError);
+    }
+  }
+
+  // Restore active tab index after all tabs are opened
+  const activeIndex = Math.min(session.activeTabIndex, validTabs.length - 1);
+  if (activeIndex >= 0) {
+    uiStore.switchTab(activeIndex);
+  }
+
+  // Restore per-tab scroll positions and selected lines
+  for (let i = 0; i < validTabs.length; i++) {
+    const tab = validTabs[i];
+    if (tab.scrollPosition != null || tab.selectedId != null) {
+      uiStore.saveTabScrollState(i, tab.scrollPosition ?? 0, tab.selectedId ?? null);
     }
   }
 

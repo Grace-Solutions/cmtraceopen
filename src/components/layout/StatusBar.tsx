@@ -1,9 +1,9 @@
 import { useMemo } from "react";
 import { Badge, Spinner, tokens } from "@fluentui/react-components";
 import { LOG_UI_FONT_FAMILY } from "../../lib/log-accessibility";
+import { getBaseName } from "../../lib/file-paths";
 import {
   getActiveSourceLabel,
-  getBaseName,
   getParserSelectionDisplay,
   getSourceFailureReason,
   getStreamStateSnapshot,
@@ -18,11 +18,11 @@ import {
   isIntuneWorkspace,
   useUiStore,
 } from "../../stores/ui-store";
-import { useIntuneStore } from "../../stores/intune-store";
-import { useDsregcmdStore } from "../../stores/dsregcmd-store";
-import { useDeploymentStore } from "../../stores/deployment-store";
-import { useSysmonStore } from "../../stores/sysmon-store";
-import { useEvtxStore } from "../../stores/evtx-store";
+import { useIntuneStore } from "../../workspaces/intune/intune-store";
+import { useDsregcmdStore } from "../../workspaces/dsregcmd/dsregcmd-store";
+import { useDeploymentStore } from "../../workspaces/deployment/deployment-store";
+import { useSysmonStore } from "../../workspaces/sysmon/sysmon-store";
+import { useEvtxStore } from "../../workspaces/event-log/evtx-store";
 
 interface SeverityCounts {
   errors: number;

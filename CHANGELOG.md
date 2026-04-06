@@ -25,13 +25,19 @@ All notable changes to this project will be documented in this file.
   - **Rust backend** (`src-tauri/src/sysmon/`): EVTX parser that reads all events (no cap) and classifies them into 23 Sysmon event types — process creation (ID 1), network connections (ID 3), file operations (IDs 11, 15, 23), registry activity (IDs 12, 13, 14), DNS queries (ID 22), image loads (ID 7), driver loads (ID 6), WMI activity (IDs 19, 20, 21), and more. Extracts structured fields (process names, hashes, parent processes, network destinations, registry keys) from XML event data. Produces dashboard aggregations: timeline bucketing with auto-scaling resolution (minute/5-minute/hourly/daily based on time span), top-N ranked lists (processes, network destinations, DNS queries, registry keys), event type distribution, and security alert classification (high-severity events like process injection, credential access, driver loads). Config extraction from event IDs 4/16 with hash algorithm inference. Pre-allocated HashMaps for 100K+ event performance. 14 backend tests covering summary generation, timeline bucketing, top-N ranking, config extraction, and security classification.
   - **Frontend** (`src/components/sysmon/`): Four-tab workspace — Dashboard (metric cards, event type donut chart, timeline histogram, security alerts, top process/network/DNS/registry lists), Events (searchable table with severity filtering and TanStack Virtual scrolling), Summary (file metadata), Config (Sysmon configuration XML viewer). Theme-aware chart colors via Fluent UI tokens. Zustand store with analysis progress events matching the Intune workspace pattern.
   - **Integration**: Registered as "sysmon" workspace with in-workspace source picker — "Open .evtx Files" button and "This Computer" button (Windows) to query the live Sysmon event log. Toolbar workspace switcher, progress listener hook, `analyze_sysmon_logs` Tauri IPC command.
+- **Intune failed app context**: Expanded failed AppWorkload context export with polished output for troubleshooting failed app deployments.
 
 ### Fixed
 
+- **PR #82 review fixes**: Resolved merged-tab ID collisions by prefixing entry IDs with source file index. Session restore now persists recent sessions to `localStorage` on save. Correlation refresh no longer stalls when switching merged tabs. Diff view properly cleans up state on close.
+- **Intune cross-file sorting** (PR #78): Unified timeline sorting across multiple Intune log files now sorts by datetime consistently, fixing out-of-order entries when merging rotated log files.
+- **Code review fixes** (PR #81): Scroll sync no longer fights user interaction. Session restore validates file paths before loading. Merge entry deduplication uses stable sort. UTF-8 safety enforced in merge filename display. GUID casing normalized to lowercase for consistent lookups.
 - **Rotated AppWorkload parsing**: Rotated AppWorkload files (e.g., `AppWorkload-20260401-160729.log`) now correctly parse as LogicalRecord framing instead of falling back to PhysicalLine. Changed IME filename detection from exact match to prefix match.
 - **GUID extraction priority**: App GUID extraction now prefers "for app <GUID>" patterns over generic first-GUID matching, preventing user GUIDs from being used as app identifiers in StatusReport lines.
-- **Tab close cleanup**: Closing the last tab now properly clears log content, filters, and UI state.
+- **Tab close cleanup**: Closing the last tab now properly clears log content, filters, and UI state (#55).
 - **Button types**: Added explicit `type="button"` to prevent unintended form submissions.
+- **Sysmon feature gating**: Sysmon module properly gated behind `sysmon` feature flag to prevent compilation on non-Windows targets without the feature enabled. Fixed clippy warnings in sysmon module.
+- **Graph API merge conflicts**: Resolved integration conflicts between Graph API GUID resolution and existing Intune pipeline code.
 - **Session save silent failure**: Save Session no longer silently does nothing when no tabs are open — the save dialog always appears so workspace state and filters can still be saved.
 - **Session restore with missing files**: Restore no longer bails entirely when saved files are missing — workspace state, filters, and available files are still restored.
 - **Sysmon workspace not visible**: The Sysmon workspace was missing from `get_available_workspaces()` and never appeared in the workspace switcher. Added the `sysmon` feature gate.
@@ -40,6 +46,10 @@ All notable changes to this project will be documented in this file.
 ### Changed
 
 - **Columns determined by parser**: Active columns are now derived from the detected parser format, not user toggles. Removed `hiddenColumns` from UI state.
+
+### Security
+
+- **CI workflow permissions**: Added explicit `contents: read` and `actions: read` permissions to CI workflow to follow least-privilege principle.
 
 ## [1.0.3] - 2026-03-31
 

@@ -10,13 +10,13 @@ import type {
 } from "../types/log";
 import type { EvidenceArtifactPreview, EvidenceBundleDetails, EvidenceArtifactIntakeKind } from "../types/evidence";
 import type { RegistryParseResult } from "../types/registry";
-import type { IntuneAnalysisResult } from "../types/intune";
-import type { SysmonAnalysisResult } from "../types/sysmon";
+import type { IntuneAnalysisResult } from "../workspaces/intune/types";
+import type { SysmonAnalysisResult } from "../workspaces/sysmon/types";
 import type {
   DsregcmdAnalysisResult,
   DsregcmdCaptureResult,
   DsregcmdResolvedSource,
-} from "../types/dsregcmd";
+} from "../workspaces/dsregcmd/types";
 
 export interface FileAssociationPromptStatus {
   supported: boolean;
@@ -350,7 +350,7 @@ import type {
   MacosPackageInfo,
   MacosPackageFiles,
   MacosUnifiedLogResult,
-} from "../types/macos-diag";
+} from "../workspaces/macos-diag/types";
 
 export async function macosScanEnvironment(): Promise<MacosDiagEnvironment> {
   return invokeCommand<MacosDiagEnvironment>("macos_scan_environment");
