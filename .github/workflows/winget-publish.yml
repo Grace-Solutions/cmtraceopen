@@ -10,6 +10,7 @@ jobs:
   winget:
     name: Update winget package
     runs-on: windows-latest
+    environment: release
     permissions: {}
     steps:
       - name: Install komac
