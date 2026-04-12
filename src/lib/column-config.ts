@@ -283,6 +283,8 @@ const PARSER_COLUMN_MAP: Record<ParserKind, ColumnId[]> = {
   burn: ["severity", "dateTime", "message", "component", "thread"],
   patchMyPcDetection: ["severity", "dateTime", "message", "component", "hostName", "operationName"],
   registry: ["message"],
+  dnsDebug: ["severity", "dateTime", "message"],
+  dnsAudit: ["severity", "dateTime", "message"],
 };
 
 /** Default columns used before any file is loaded. */
