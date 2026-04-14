@@ -6,7 +6,53 @@ All notable changes to this project will be documented in this file.
 
 ### Added
 
-- **Auto-fit column widths** (PR #114, original PR #108 by @gepardjaro): Double-click a column resize handle to auto-fit that column to its widest content. Click the ↔ icon in the severity column header to auto-fit all visible columns at once. Uses a two-pass measurement algorithm (string length scan then canvas measurement of top candidates) for efficient sizing on large logs. Message column is excluded from auto-fit to prevent long content from pushing everything off-screen. Results are capped at 1200px and persist to preferences.
+- **`.cmtlog` file format and parser** (#126): New structured log format extending CCM's `<![LOG[...]LOG]!>` with reserved component names (`__HEADER__`, `__SECTION__`, `__ITERATION__`) and optional extended attributes (`section`, `tag`, `whatif`, `iteration`, `color`). Fully backward-compatible with CMTrace.exe. Auto-detected by `.cmtlog` extension or content heuristics. Includes Rust parser module with section context propagation and 9 integration tests.
+- **Color-coded user markers** (#126): Annotate log entries with Bug (red), Investigate (blue), or Confirmed (green) markers via right-click context menu, gutter click, or Ctrl+M. Markers persist to AppData keyed by file path hash. Includes marker gutter dots, row tinting, left border indicators, and a category context menu. Custom categories supported.
+- **Section divider rendering** (#126): CmtLog section and iteration markers render as full-width colored banner rows with left-edge color bands on child entries. Auto-color palette assigns distinct colors to sections without explicit colors.
+- **WhatIf rendering** (#126): Log entries with `whatif="1"` render at 60% opacity with italic text and a purple "WhatIf" badge next to the severity indicator. Filter store gains a WhatIf toggle (all/whatif-only/real-only).
+- **Multi-select copy** (#126): Ctrl+Click to toggle individual lines, Shift+Click for range selection, Ctrl+A to select all visible entries, Ctrl+C to copy selected messages as plain text. Single-entry copy preserves tab-separated format.
+- **PowerShell CmtLog module** (#126): `CmtLog.psm1` with `Start-CmtLog`, `Write-LogEntry`, `Write-LogSection`, `Write-LogIteration`, and `Write-LogHeader`. UTF-8 no-BOM encoding for PS 5.1 compatibility. Supports `-Section`, `-Tag`, `-WhatIfEntry`, `-Iteration`, and `-FileName` parameters.
+- **DNS debug log parser** (#116): Parse Windows DNS Server debug logs (`dns.log`) with LogicalRecord framing, locale-aware timestamp parsing, and structured DNS fields (query name, type, response code, direction, protocol, source IP, flags).
+- **DNS audit EVTX parser** (#116): Parse DNS Server audit event logs (`.evtx`) with EventID-based schema dispatch (IDs 256-582), zone name extraction, and DNS-specific column rendering.
+- **Auto-fit column widths** (#114, original PR #108 by @gepardjaro): Double-click a column resize handle to auto-fit that column to its widest content. Click the arrow icon in the severity column header to auto-fit all visible columns at once. Message column excluded from auto-fit. Results persist to preferences.
+- **PatchMyPC detection parser** (#112): Dedicated parser for PatchMyPC detection logs with structured field extraction and "Open All" family action.
+- **Secure Boot Certificate workspace** (#110): Workspace for analyzing Secure Boot certificate stores with timeline, raw data, and certificate detail views.
+- **Pluggable workspace registry** (#84): Workspace system refactored into a plugin-style registry for easier extensibility.
+- **Quick Stats enhancements** (#111): Compact stat cards with severity filter toggles, column sorting on error code table, and time range display.
+- **Multi-line CCM parser** (#111): CCM log entries that span multiple lines (e.g., stack traces, multi-line messages) are now grouped into a single entry instead of splitting each physical line.
+- **`.cmtlog` OS file association**: Double-click `.cmtlog` files to open them directly in CMTrace Open. Registered in Tauri config for Windows/macOS.
+- **Automated winget publishing**: Release workflow automatically submits new versions to winget-pkgs via komac on GitHub Release publish.
+
+### Fixed
+
+- **CCM timezone regex** (#126): Handle double-sign timezone values (e.g., `+-240`) produced by PowerShell's format string when timezone bias is negative.
+- **ARM64 Windows build support**: Build scripts now detect ARM64 hosts, install ARM64 MSVC tools and LLVM/Clang, and configure VS Developer Shell with correct architecture flags.
+- **PowerShell 5.1 compatibility**: All `.ps1`/`.psm1` files use ASCII-only characters (no em-dashes) and UTF-8 no-BOM encoding to avoid parse failures on Windows PowerShell 5.1.
+- **Marker persistence**: Markers correctly keyed by `entry.filePath`, disabled in merged mode, dirty flag prevents redundant saves after load, created timestamps preserved across saves.
+- **SectionDividerRow accessibility**: Added `id`, `role="option"`, and proper aria attributes for screen reader compatibility.
+- **Ctrl+C multi-select**: Global keyboard handler defers to LogListView when the log list is focused, enabling multi-line copy.
+- **Secureboot parser wiring** (#127): Fixed missing `secureboot_log` module import, counter declaration, and match arms that blocked CI.
+- **Column width reset on tab switch** (#114): Column widths now reset to parser defaults when opening a new file or switching tabs, preventing stale widths from a previous format.
+- **Tauri plugin version alignment**: Aligned `@tauri-apps/plugin-*` npm packages with their Rust crate counterparts to prevent version mismatch errors.
+- **Auto-fit drag conflict** (#114): Fit-all button no longer triggers column drag-to-reorder on accidental drag.
+
+### Changed
+
+- **Dependencies**: `windows` crate 0.58 to 0.61 (API migration), `ureq` 2 to 3 (builder/header API migration), `winreg` 0.52 to 0.55, `notify` 7 to 8, `evtx` 0.8 to 0.11, `azure/trusted-signing-action` 0.5 to 1.2, `actions/checkout` 4.3 to 6.0, `actions/upload-artifact` 4.6 to 7.0, `actions/attest-build-provenance` 2.4 to 4.1, plus minor bumps to tokio, tauri plugins, vite, and other dev dependencies.
+
+### Security
+
+- **GitHub Actions hardening** (#87): Comprehensive security hardening for Patch My PC distribution readiness:
+  - Pinned all GitHub Action versions to full commit SHAs across CI, release, and codesign workflows to prevent supply chain attacks via tag mutation.
+  - Added explicit `permissions` blocks to all workflows following least-privilege principle (`contents: read`, `actions: read`).
+  - Scoped `WINGET_PAT` secret to the release environment only.
+  - Added `SECURITY.md` vulnerability disclosure policy.
+  - Added `CODEOWNERS` for automatic PR review requests.
+  - Configured Dependabot for npm, Cargo, and GitHub Actions with grouped updates.
+- **Build provenance attestations**: Release and codesign workflows generate SLSA provenance attestations via `actions/attest-build-provenance` (upgraded to v4.1.0) for all release artifacts.
+- **SBOM generation**: Release workflow generates CycloneDX SBOMs for the Rust dependency tree via `cargo-cyclonedx` (pinned to v0.5.9 for deterministic output).
+- **Azure trusted signing**: Upgraded `azure/trusted-signing-action` from 0.5.11 to 1.2.0 for Windows code signing.
+- **Cargo security audit**: CI workflow runs `cargo audit` to check for known vulnerabilities in Rust dependencies.
 
 ## [1.1.0] - 2026-04-05
 
