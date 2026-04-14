@@ -18,6 +18,10 @@ All notable changes to this project will be documented in this file.
 - **PatchMyPC detection parser** (#112): Dedicated parser for PatchMyPC detection logs with structured field extraction and "Open All" family action.
 - **Secure Boot Certificate workspace** (#110): Workspace for analyzing Secure Boot certificate stores with timeline, raw data, and certificate detail views.
 - **Pluggable workspace registry** (#84): Workspace system refactored into a plugin-style registry for easier extensibility.
+- **Quick Stats enhancements** (#111): Compact stat cards with severity filter toggles, column sorting on error code table, and time range display.
+- **Multi-line CCM parser** (#111): CCM log entries that span multiple lines (e.g., stack traces, multi-line messages) are now grouped into a single entry instead of splitting each physical line.
+- **`.cmtlog` OS file association**: Double-click `.cmtlog` files to open them directly in CMTrace Open. Registered in Tauri config for Windows/macOS.
+- **Automated winget publishing**: Release workflow automatically submits new versions to winget-pkgs via komac on GitHub Release publish.
 
 ### Fixed
 
@@ -28,10 +32,13 @@ All notable changes to this project will be documented in this file.
 - **SectionDividerRow accessibility**: Added `id`, `role="option"`, and proper aria attributes for screen reader compatibility.
 - **Ctrl+C multi-select**: Global keyboard handler defers to LogListView when the log list is focused, enabling multi-line copy.
 - **Secureboot parser wiring** (#127): Fixed missing `secureboot_log` module import, counter declaration, and match arms that blocked CI.
+- **Column width reset on tab switch** (#114): Column widths now reset to parser defaults when opening a new file or switching tabs, preventing stale widths from a previous format.
+- **Tauri plugin version alignment**: Aligned `@tauri-apps/plugin-*` npm packages with their Rust crate counterparts to prevent version mismatch errors.
+- **Auto-fit drag conflict** (#114): Fit-all button no longer triggers column drag-to-reorder on accidental drag.
 
 ### Changed
 
-- **Dependencies**: `windows` crate 0.58 to 0.61 (API migration), `ureq` 2 to 3 (builder/header API migration), `winreg` 0.52 to 0.55, `notify` 7 to 8, `evtx` 0.8 to 0.11, plus minor bumps to tokio, tauri plugins, and GitHub Actions.
+- **Dependencies**: `windows` crate 0.58 to 0.61 (API migration), `ureq` 2 to 3 (builder/header API migration), `winreg` 0.52 to 0.55, `notify` 7 to 8, `evtx` 0.8 to 0.11, `azure/trusted-signing-action` 0.5 to 1.2, `actions/checkout` 4.3 to 6.0, `actions/upload-artifact` 4.6 to 7.0, `actions/attest-build-provenance` 2.4 to 4.1, plus minor bumps to tokio, tauri plugins, vite, and other dev dependencies.
 
 ### Security
 
