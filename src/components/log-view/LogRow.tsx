@@ -315,6 +315,7 @@ export const LogRow = memo(function LogRow({
         ...(backgroundOverlays.length > 0
           ? { backgroundImage: backgroundOverlays.join(", ") }
           : {}),
+        ...(entry.whatif ? { opacity: 0.6 } : {}),
       }}
       onClick={() => onClick(entry.id)}
       onContextMenu={(e) => onContextMenu(entry, e)}
@@ -444,7 +445,7 @@ export const LogRow = memo(function LogRow({
       )}
 
       {visibleColumns.map((col) => {
-        // Severity column: colored dot indicator
+        // Severity column: colored dot indicator + WhatIf badge
         if (col.id === "severity") {
           return (
             <div
@@ -454,6 +455,7 @@ export const LogRow = memo(function LogRow({
                 display: "flex",
                 alignItems: "center",
                 justifyContent: "center",
+                gap: 2,
                 overflow: "hidden",
                 padding: "1px 2px",
               }}
@@ -471,6 +473,23 @@ export const LogRow = memo(function LogRow({
                   flexShrink: 0,
                 }}
               />
+              {entry.whatif && (
+                <span
+                  style={{
+                    fontSize: 9,
+                    fontWeight: 600,
+                    lineHeight: "12px",
+                    padding: "0 3px",
+                    borderRadius: 3,
+                    backgroundColor: "#9333ea33",
+                    color: "#9333ea",
+                    whiteSpace: "nowrap",
+                    flexShrink: 0,
+                  }}
+                >
+                  WhatIf
+                </span>
+              )}
             </div>
           );
         }
@@ -486,6 +505,7 @@ export const LogRow = memo(function LogRow({
                 overflow: "hidden",
                 textOverflow: "ellipsis",
                 padding: "1px 4px",
+                ...(entry.whatif ? { fontStyle: "italic" } : {}),
               }}
             >
               {renderMessageWithSpans(
