@@ -23,6 +23,7 @@ interface LogRowProps {
   mergeFileColor?: string | null;
   isCorrelated?: boolean;
   correlationColor?: string | null;
+  sectionBandColor?: string | null;
 }
 
 /** Subtle tint for find-match rows (not the active selection). */
@@ -240,8 +241,18 @@ export const LogRow = memo(function LogRow({
   mergeFileColor,
   isCorrelated,
   correlationColor,
+  sectionBandColor,
 }: LogRowProps) {
   const style = getRowStyle(entry, isSelected, isFindMatch, severityPalette);
+
+  // Determine left-edge indicator: mergeFileColor > sectionBandColor > default
+  const leftBorderColor = mergeFileColor
+    ? mergeFileColor
+    : sectionBandColor
+      ? sectionBandColor
+      : isSelected
+        ? tokens.colorNeutralForegroundOnBrand
+        : "transparent";
 
   return (
     <div
@@ -261,9 +272,7 @@ export const LogRow = memo(function LogRow({
         lineHeight: `${rowLineHeight}px`,
         whiteSpace: "nowrap",
         transition: "filter 80ms linear",
-        boxShadow: mergeFileColor
-          ? `inset 3px 0 0 ${mergeFileColor}`
-          : `inset 3px 0 0 ${isSelected ? tokens.colorNeutralForegroundOnBrand : "transparent"}`,
+        boxShadow: `inset 4px 0 0 ${leftBorderColor}`,
         ...(isCorrelated && correlationColor && !isSelected ? {
           backgroundImage: `linear-gradient(${correlationColor}30, ${correlationColor}30)`,
         } : {}),

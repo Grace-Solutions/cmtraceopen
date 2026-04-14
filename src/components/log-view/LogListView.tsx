@@ -12,6 +12,7 @@ import { useLogStore } from "../../stores/log-store";
 import { useUiStore } from "../../stores/ui-store";
 import { useFilterStore } from "../../stores/filter-store";
 import { LogRow } from "./LogRow";
+import { SectionDividerRow } from "./SectionDividerRow";
 import { MergeLegendBar } from "./MergeLegendBar";
 import type { ErrorCodeSpan } from "../../types/log";
 import { useContextMenu } from "../../hooks/use-context-menu";
@@ -159,6 +160,29 @@ export function LogListView() {
     () => getLogListMetrics(logListFontSize),
     [logListFontSize]
   );
+
+  // ── Section color auto-assignment ────────────────────────────────────
+  const SECTION_PALETTE = useMemo(() => [
+    "#3b82f6", "#a78bfa", "#f59e0b", "#10b981",
+    "#ef4444", "#ec4899", "#06b6d4", "#84cc16",
+  ], []);
+
+  const sectionColorMap = useMemo(() => {
+    const map = new Map<string, string>();
+    let paletteIndex = 0;
+    for (const entry of displayEntries) {
+      if (
+        (entry.entryKind === "Section" || entry.entryKind === "Iteration") &&
+        entry.sectionName &&
+        !map.has(entry.sectionName)
+      ) {
+        const color = entry.sectionColor ?? SECTION_PALETTE[paletteIndex % SECTION_PALETTE.length];
+        map.set(entry.sectionName, color);
+        if (!entry.sectionColor) paletteIndex++;
+      }
+    }
+    return map;
+  }, [displayEntries, SECTION_PALETTE]);
 
   const { showContextMenu } = useContextMenu();
 
@@ -459,6 +483,14 @@ export function LogListView() {
         >
           {virtualizer.getVirtualItems().map((virtualRow) => {
             const entry = displayEntries[virtualRow.index];
+            const isSectionDivider =
+              entry.entryKind === "Section" || entry.entryKind === "Iteration";
+
+            // Resolve section band color for regular rows
+            const sectionBandColor = !isSectionDivider && entry.sectionName
+              ? (entry.sectionColor ?? sectionColorMap.get(entry.sectionName) ?? null)
+              : null;
+
             return (
               <div
                 key={entry.id}
@@ -471,25 +503,40 @@ export function LogListView() {
                   transform: `translateY(${virtualRow.start}px)`,
                 }}
               >
-                <LogRow
-                  entry={entry}
-                  rowDomId={`log-list-row-${entry.id}`}
-                  isSelected={entry.id === selectedId}
-                  isFindMatch={findMatchSet.has(entry.id)}
-                  visibleColumns={visibleColumns}
-                  gridTemplateColumns={gridTemplateColumns}
-                  listFontSize={listMetrics.fontSize}
-                  rowLineHeight={listMetrics.rowLineHeight}
-                  severityPalette={severityPalette}
-                  highlightText={highlightText}
-                  highlightCaseSensitive={highlightCaseSensitive}
-                  onClick={(id) => { if (id !== selectedId) { suppressScrollRef.current = true; } selectEntry(id); }}
-                  onContextMenu={showContextMenu}
-                  onErrorCodeClick={handleErrorCodeClick}
-                  mergeFileColor={sourceOpenMode === "merged" ? mergedTabState?.colorAssignments[entry.filePath] ?? null : null}
-                  isCorrelated={sourceOpenMode === "merged" && correlatedIdSet.has(entry.id)}
-                  correlationColor={sourceOpenMode === "merged" ? mergedTabState?.colorAssignments[entry.filePath] ?? null : null}
-                />
+                {isSectionDivider ? (
+                  <SectionDividerRow
+                    entry={entry}
+                    resolvedColor={
+                      entry.sectionColor ??
+                      sectionColorMap.get(entry.sectionName ?? entry.message) ??
+                      "#3b82f6"
+                    }
+                    listFontSize={listMetrics.fontSize}
+                    rowLineHeight={listMetrics.rowLineHeight}
+                    onClick={(id) => { if (id !== selectedId) { suppressScrollRef.current = true; } selectEntry(id); }}
+                  />
+                ) : (
+                  <LogRow
+                    entry={entry}
+                    rowDomId={`log-list-row-${entry.id}`}
+                    isSelected={entry.id === selectedId}
+                    isFindMatch={findMatchSet.has(entry.id)}
+                    visibleColumns={visibleColumns}
+                    gridTemplateColumns={gridTemplateColumns}
+                    listFontSize={listMetrics.fontSize}
+                    rowLineHeight={listMetrics.rowLineHeight}
+                    severityPalette={severityPalette}
+                    highlightText={highlightText}
+                    highlightCaseSensitive={highlightCaseSensitive}
+                    onClick={(id) => { if (id !== selectedId) { suppressScrollRef.current = true; } selectEntry(id); }}
+                    onContextMenu={showContextMenu}
+                    onErrorCodeClick={handleErrorCodeClick}
+                    mergeFileColor={sourceOpenMode === "merged" ? mergedTabState?.colorAssignments[entry.filePath] ?? null : null}
+                    isCorrelated={sourceOpenMode === "merged" && correlatedIdSet.has(entry.id)}
+                    correlationColor={sourceOpenMode === "merged" ? mergedTabState?.colorAssignments[entry.filePath] ?? null : null}
+                    sectionBandColor={sectionBandColor}
+                  />
+                )}
               </div>
             );
           })}
