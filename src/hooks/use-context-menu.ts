@@ -43,10 +43,10 @@ export function useContextMenu() {
       const errorCode = findErrorCode(entry);
       const messagePreview = truncate(entry.message, 40);
 
-      // Marker state — check if entry is already marked
+      // Marker state — use entry.filePath as the canonical key
       const markerState = useMarkerStore.getState();
-      const currentFilePath = useLogStore.getState().openFilePath || "";
-      const fileMarkers = markerState.markersByFile.get(currentFilePath);
+      const entryFilePath = entry.filePath;
+      const fileMarkers = markerState.markersByFile.get(entryFilePath);
       const existingMarker = fileMarkers?.get(entry.id);
 
       const items: (MenuItem | PredefinedMenuItem)[] = [
@@ -133,7 +133,7 @@ export function useContextMenu() {
               id: "marker-remove",
               text: `Remove Marker (${currentCat?.label ?? existingMarker.category})`,
               action: () => {
-                const fp = useLogStore.getState().openFilePath || "";
+                const fp = entry.filePath;
                 if (!fp) return;
                 useMarkerStore.getState().toggleMarker(fp, entry.id);
                 useMarkerStore.getState().saveMarkers(fp);

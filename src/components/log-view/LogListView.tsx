@@ -197,7 +197,8 @@ export function LogListView() {
   const setMarkerCategory = useMarkerStore((s) => s.setMarkerCategory);
   const markerCategories = useMarkerStore((s) => s.categories);
 
-  const activeFilePath = openFilePath ?? "";
+  // Use openFilePath if set, otherwise derive from the first entry's filePath
+  const activeFilePath = openFilePath ?? (entries.length > 0 ? entries[0].filePath : "");
   const fileMarkers: Map<number, Marker> = useMemo(
     () => markersByFile.get(activeFilePath) ?? new Map(),
     [markersByFile, activeFilePath]
