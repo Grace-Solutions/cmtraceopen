@@ -18,6 +18,7 @@ import type { ErrorCodeSpan } from "../../types/log";
 import type { Marker } from "../../types/markers";
 import { useMarkerStore } from "../../stores/marker-store";
 import { writeText } from "@tauri-apps/plugin-clipboard-manager";
+import { formatLogEntryTimestamp } from "../../lib/date-time-format";
 import { useContextMenu } from "../../hooks/use-context-menu";
 import { ArrowBidirectionalLeftRightRegular } from "@fluentui/react-icons";
 import {
@@ -289,11 +290,24 @@ export function LogListView() {
 
   const handleCopySelected = useCallback(() => {
     if (selectedIds.size === 0) return;
-    // Preserve display order
-    const messages = displayEntries
-      .filter((e) => selectedIds.has(e.id))
-      .map((e) => e.message);
-    writeText(messages.join("\n")).catch(console.error);
+    const selected = displayEntries.filter((e) => selectedIds.has(e.id));
+    if (selected.length === 0) return;
+
+    let text: string;
+    if (selected.length === 1) {
+      // Single entry: tab-separated format matching legacy Ctrl+C behavior
+      const entry = selected[0];
+      text = [
+        entry.message,
+        entry.component ?? "",
+        formatLogEntryTimestamp(entry) ?? "",
+        entry.threadDisplay ?? "",
+      ].join("\t");
+    } else {
+      // Multi-select: plain messages, one per line
+      text = selected.map((e) => e.message).join("\n");
+    }
+    writeText(text).catch(console.error);
   }, [selectedIds, displayEntries]);
 
   const handleCopyByCategory = useCallback(
