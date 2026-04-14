@@ -69,7 +69,7 @@ pub fn parse_lines(
     date_order: DateOrder,
 ) -> (Vec<LogEntry>, u32) {
     let mut entries = Vec::with_capacity(lines.len() / 2);
-    let parse_errors: u32 = 0;
+    let mut parse_errors: u32 = 0;
     let mut next_id: u64 = 0;
     let mut pending: Option<PendingEntry> = None;
 
@@ -90,6 +90,11 @@ pub fn parse_lines(
                 start_line: line_number,
             });
             continue;
+        }
+
+        // Line contains "PACKET" but failed structured parsing — count as a parse error
+        if trimmed.contains("PACKET") {
+            parse_errors += 1;
         }
 
         // Not a PACKET line — if we have a pending entry, this is a detail line
@@ -270,8 +275,12 @@ fn parse_dns_timestamp(s: &str, date_order: DateOrder) -> (Option<i64>, Option<S
     let trimmed = s.trim();
 
     // Check for ISO format: yyyyMMdd HH:mm:ss
-    if trimmed.len() >= 15 && trimmed.as_bytes()[0].is_ascii_digit() && !trimmed.contains('/') {
-        return parse_iso_timestamp(trimmed);
+    // Strict validation: positions 0..8 must all be digits and position 8 must be a space.
+    if trimmed.len() >= 15 {
+        let bytes = trimmed.as_bytes();
+        if bytes[0..8].iter().all(|b| b.is_ascii_digit()) && bytes[8] == b' ' {
+            return parse_iso_timestamp(trimmed);
+        }
     }
 
     // Slash-delimited date: M/d/yyyy or dd/MM/yyyy

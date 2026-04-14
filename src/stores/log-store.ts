@@ -299,6 +299,8 @@ function getParserLabel(parser: ParserSelectionInfo["parser"]): string {
       return "PatchMyPC Detection";
     case "registry":
       return "Registry";
+    case "secureBootLog":
+      return "Secure Boot Log";
     case "dnsDebug":
       return "DNS Debug Log";
     case "dnsAudit":
@@ -336,6 +338,8 @@ function getImplementationLabel(
       return "PatchMyPC detection script parser";
     case "registry":
       return "Windows Registry export parser";
+    case "secureBootLog":
+      return "Secure Boot certificate update parser";
     case "dnsDebug":
       return "DNS debug log parser";
     case "dnsAudit":

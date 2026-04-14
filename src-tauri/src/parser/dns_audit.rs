@@ -62,19 +62,24 @@ pub fn parse_evtx(path: &str) -> Result<ParseResult, String> {
 
     let mut entries: Vec<LogEntry> = Vec::new();
     let mut id: u64 = 0;
+    let mut parse_errors: u32 = 0;
 
     for record_result in parser.records_json() {
         let record = match record_result {
             Ok(r) => r,
             Err(e) => {
                 log::warn!("event=dns_audit_record_skip file=\"{}\" error=\"{}\"", path, e);
+                parse_errors += 1;
                 continue;
             }
         };
 
         let json: Value = match serde_json::from_str(&record.data) {
             Ok(v) => v,
-            Err(_) => continue,
+            Err(_) => {
+                parse_errors += 1;
+                continue;
+            }
         };
 
         let system = &json["Event"]["System"];
@@ -165,7 +170,7 @@ pub fn parse_evtx(path: &str) -> Result<ParseResult, String> {
         format_detected: LogFormat::DnsAudit,
         parser_selection: selection_info,
         total_lines,
-        parse_errors: 0,
+        parse_errors,
         file_path: path.to_string(),
         file_size,
         byte_offset: file_size,
@@ -216,6 +221,7 @@ fn parse_evtx_timestamp(raw: &str) -> (Option<i64>, Option<String>) {
 /// Human-readable event name for known DNS audit EventIDs.
 fn event_name(event_id: u32) -> &'static str {
     match event_id {
+        512 => "Zone Load",
         513 => "Zone Delete",
         514 => "Zone Setting",
         515 => "Record Create",
@@ -258,8 +264,8 @@ fn extract_event_fields(event_id: u32, data: &Value) -> EventFields {
     match event_id {
         // Record operations
         515..=521 => extract_record_ops(event_id, data),
-        // Zone configuration
-        513 | 514 | 522..=537 => extract_zone_config(event_id, data),
+        // Zone configuration (512 = Zone Load, 513 = Zone Delete, 514 = Zone Setting, etc.)
+        512..=514 | 522..=537 => extract_zone_config(event_id, data),
         // Server configuration
         540..=560 => extract_server_config(event_id, data),
         // DNSSEC key operations

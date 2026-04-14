@@ -69,17 +69,25 @@ pub fn parse_file(path: &str) -> Result<(ParseResult, ResolvedParser), String> {
             );
         }
 
-        #[cfg(feature = "event-log")]
         if ext_lower == "evtx" {
-            if dns_audit::is_dns_evtx(path_obj) {
-                let result = dns_audit::parse_evtx(path)?;
-                let selection = ResolvedParser::dns_audit();
-                return Ok((result, selection));
+            #[cfg(feature = "event-log")]
+            {
+                if dns_audit::is_dns_evtx(path_obj) {
+                    let result = dns_audit::parse_evtx(path)?;
+                    let selection = ResolvedParser::dns_audit();
+                    return Ok((result, selection));
+                }
+                // Not a DNS EVTX — return an error since we have no other EVTX handler in the log pipeline.
+                return Err(
+                    "This EVTX file does not contain DNS audit events. \
+                     Try opening it in the Sysmon workspace instead."
+                        .to_string(),
+                );
             }
-            // Not a DNS EVTX — fall through to let other handlers deal with it.
+            #[cfg(not(feature = "event-log"))]
             return Err(
-                "This EVTX file does not contain DNS audit events. \
-                 Try opening it in the Sysmon workspace instead."
+                "EVTX event log files require the 'event-log' feature. \
+                 This build does not include EVTX support."
                     .to_string(),
             );
         }

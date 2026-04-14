@@ -373,6 +373,7 @@ const PARSER_COLUMN_MAP: Record<ParserKind, ColumnId[]> = {
   burn: ["severity", "dateTime", "message", "component", "thread"],
   patchMyPcDetection: ["severity", "dateTime", "message", "component", "hostName", "operationName"],
   registry: ["message"],
+  secureBootLog: ["severity", "dateTime", "message", "component"],
   dnsDebug: ["severity", "dateTime", "dnsDirection", "dnsProtocol", "queryName", "queryType", "responseCode", "sourceIp", "dnsFlags", "message"],
   dnsAudit: ["severity", "dateTime", "dnsEventId", "queryName", "queryType", "responseCode", "zoneName", "sourceIp", "message"],
 };

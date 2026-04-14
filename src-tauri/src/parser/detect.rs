@@ -2,6 +2,9 @@
 //!
 //! Examines the first non-empty lines of file content to determine
 //! whether it uses CCM, Simple, Timestamped, or Plain text format.
+//! Normally samples 20 lines; when DNS path hints are detected, the
+//! sample window extends to 50 lines to look past the ~29-line DNS
+//! debug log header.
 //!
 //! Detection strategy (matches CMTrace binary behavior, extended):
 //! - Check for `<![LOG[` marker → CCM format
