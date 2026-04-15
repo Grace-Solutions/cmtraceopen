@@ -4,8 +4,6 @@ All notable changes to this project will be documented in this file.
 
 ## [1.2.0] - 2026-04-14
 
-## [Unreleased]
-
 ### Added
 
 - **`.cmtlog` file format and parser** (#126): New structured log format extending CCM's `<![LOG[...]LOG]!>` with reserved component names (`__HEADER__`, `__SECTION__`, `__ITERATION__`) and optional extended attributes (`section`, `tag`, `whatif`, `iteration`, `color`). Fully backward-compatible with CMTrace.exe. Auto-detected by `.cmtlog` extension or content heuristics. Includes Rust parser module with section context propagation and 9 integration tests.
