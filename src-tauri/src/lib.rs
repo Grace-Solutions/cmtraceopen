@@ -2,6 +2,8 @@ mod constants;
 #[cfg(feature = "collector")]
 pub mod collector;
 mod commands;
+#[cfg(debug_assertions)]
+mod ipc_bridge;
 #[cfg(feature = "dsregcmd")]
 pub mod dsregcmd;
 pub mod error;
@@ -75,6 +77,11 @@ pub fn run() {
                     window.open_devtools();
                 }
             }
+
+            // Start the Playwright IPC bridge in debug builds so a browser
+            // loaded at the Vite dev server (:1420) can make real Rust IPC calls.
+            #[cfg(debug_assertions)]
+            tauri::async_runtime::spawn(ipc_bridge::start(1422));
 
             Ok(())
         })
