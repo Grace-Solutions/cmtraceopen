@@ -178,27 +178,37 @@ pub fn parse_files_batch(
         results.len()
     );
 
-    // Collect successes and store parser state (requires lock, done sequentially)
+    // Collect successes and store parser state (requires lock, done sequentially).
+    // Per-file failures are logged and skipped so the rest of the batch still loads
+    // (e.g. one inaccessible file in a folder must not abort the whole open).
     let mut parse_results = Vec::with_capacity(results.len());
+    let mut skipped = 0u32;
     let mut open_files = state.open_files.lock().map_err(|e| crate::error::AppError::State(e.to_string()))?;
 
     for item in results {
-        let (result, parser_selection, path) = item?;
-        open_files.insert(
-            PathBuf::from(&path),
-            OpenFile {
-                path: PathBuf::from(&path),
-                entries: vec![],
-                parser_selection,
-                byte_offset: result.byte_offset,
-            },
-        );
-        parse_results.push(result);
+        match item {
+            Ok((result, parser_selection, path)) => {
+                open_files.insert(
+                    PathBuf::from(&path),
+                    OpenFile {
+                        path: PathBuf::from(&path),
+                        entries: vec![],
+                        parser_selection,
+                        byte_offset: result.byte_offset,
+                    },
+                );
+                parse_results.push(result);
+            }
+            Err(error) => {
+                skipped = skipped.saturating_add(1);
+                log::warn!("event=parse_files_batch_skip error=\"{error}\"");
+            }
+        }
     }
 
     let total_ms = batch_start.elapsed().as_millis();
     log::info!(
-        "event=parse_files_batch_complete file_count={} results={} total_ms={total_ms}",
+        "event=parse_files_batch_complete file_count={} results={} skipped={skipped} total_ms={total_ms}",
         paths.len(),
         parse_results.len()
     );
@@ -223,7 +233,18 @@ pub fn open_log_folder_aggregate(
     let mut parse_errors = 0u32;
 
     for entry in file_entries {
-        let (result, parser_selection) = parser::parse_file(&entry.path)?;
+        // Skip files we can't read (permission denied, missing, etc.) so a
+        // single inaccessible file doesn't abort the whole folder load.
+        let (result, parser_selection) = match parser::parse_file(&entry.path) {
+            Ok(value) => value,
+            Err(error) => {
+                log::warn!(
+                    "event=open_log_folder_aggregate_skip path=\"{}\" error=\"{error}\"",
+                    entry.path
+                );
+                continue;
+            }
+        };
 
         total_lines = total_lines.saturating_add(result.total_lines);
         parse_errors = parse_errors.saturating_add(result.parse_errors);
