@@ -51,14 +51,12 @@ fn get_initial_file_paths_from_args() -> Vec<String> {
 pub fn run() {
     let initial_file_paths = get_initial_file_paths_from_args();
 
-    let mut builder = tauri::Builder::default()
+    tauri::Builder::default()
         .plugin(tauri_plugin_dialog::init())
         .plugin(tauri_plugin_fs::init())
         .plugin(tauri_plugin_clipboard_manager::init())
         .plugin(tauri_plugin_os::init())
-        .plugin(tauri_plugin_process::init());
-
-    builder
+        .plugin(tauri_plugin_process::init())
         .setup(|app| {
             #[cfg(desktop)]
             app.handle()
