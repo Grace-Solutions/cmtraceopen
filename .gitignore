@@ -5,10 +5,12 @@ node_modules/
 dist/
 
 # Rust
+/target/
 src-tauri/target/
 src-tauri/target-test/debug/
 src-tauri/target-test/release/
 src-tauri/target-test
+crates/**/target/
 
 # IDE
 .vscode/
