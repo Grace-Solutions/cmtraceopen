@@ -27,6 +27,7 @@ macos-diag = ["dep:plist"]
 secureboot = ["dep:tempfile"]
 
 [dependencies]
+cmtraceopen-parser = { path = "../crates/cmtraceopen-parser" }
 tauri = { version = "2", features = [] }
 tauri-plugin-dialog = "2"
 tauri-plugin-fs = "2"
